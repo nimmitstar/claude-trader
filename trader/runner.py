@@ -21,7 +21,7 @@ from trader.log import TRADES_DIR, log_trade, save_portfolio_state
 
 PAIRS = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
 PAIR_ASSETS = {"BTCUSDT": "BTC", "ETHUSDT": "ETH", "SOLUSDT": "SOL"}
-TIMEFRAME = "1h"
+TIMEFRAME = "15m"
 NUM_BARS = 200
 
 # Track open SL/TP order IDs: {pair: {"sl": order_id, "tp": order_id}}
@@ -164,8 +164,11 @@ def run(dry_run: bool = True) -> dict:
 
         # Run strategy
         signal = engine.analyze(pair, bars, usdt_available)
+        kronos_line = ""
+        if signal.get("kronos_predicted_close"):
+            kronos_line = f" | Kronos: {signal['kronos_predicted_close']}"
         print(f"  Signal: {signal['action']} (confidence: {signal['confidence']})")
-        print(f"  RSI: {signal['rsi']} | MA: {signal['ma_signal']} | Score: {signal['raw_score']}")
+        print(f"  RSI: {signal['rsi']} | MA: {signal['ma_signal']} | Score: {signal['raw_score']}{kronos_line}")
         print(f"  Rationale: {signal['rationale']}")
 
         result = {**signal, "executed": False, "order_result": None}

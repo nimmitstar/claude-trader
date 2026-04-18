@@ -10,31 +10,56 @@ import json
 from pathlib import Path
 
 from strategy.indicators import ma_crossover, rsi, volume_confirm
+from strategy.kronos_signal import get_kronos_signal
 
 COOLDOWN_FILE = Path(__file__).parent.parent / "trades" / "cooldown.json"
+PARAMS_FILE = Path(__file__).parent / "params.json"
 
-# Strategy weights
-MA_WEIGHT = 0.40
-RSI_WEIGHT = 0.35
-VOL_WEIGHT = 0.25
 
-# RSI thresholds
-RSI_OVERBOUGHT = 70
-RSI_OVERSOLD = 30
-
-# Cooldown
-COOLDOWN_HOURS = 4
-
-# Entry: need >=2 of 3 indicators aligned
-MIN_SIGNALS = 2
+def load_params() -> dict:
+    """Load strategy parameters from params.json."""
+    if PARAMS_FILE.exists():
+        with open(PARAMS_FILE) as f:
+            return json.load(f)
+    # Fallback defaults
+    return {
+        "ma_weight": 0.30,
+        "rsi_weight": 0.25,
+        "vol_weight": 0.20,
+        "kronos_weight": 0.25,
+        "rsi_overbought": 70,
+        "rsi_oversold": 30,
+        "cooldown_hours": 1,
+        "min_signals": 2,
+        "ma_fast": 5,
+        "ma_slow": 15,
+        "rsi_period": 7,
+        "volume_window": 20,
+        "kronos_model": "kronos-small",
+        "kronos_timeout_seconds": 30,
+    }
 
 
 class StrategyEngine:
-    """Runs technical analysis and produces trade signals."""
+    """Runs technical analysis and produces trade signals.
 
-    def __init__(self) -> None:
+    Uses 4 indicators:
+    - MA Crossover (momentum)
+    - RSI (overbought/oversold)
+    - Volume confirmation
+    - Kronos ML forecast (price prediction)
+    """
+
+    def __init__(self, params: dict | None = None) -> None:
+        """Initialize engine with optional params override."""
+        self.params = params or load_params()
         self.last_entry: dict[str, datetime] = {}
         self._load_cooldown()
+
+        # Initialize Kronos (lazy load on first forecast)
+        self.kronos = get_kronos_signal(
+            timeout=self.params.get("kronos_timeout_seconds", 30),
+        )
 
     def analyze(
         self,
@@ -52,12 +77,19 @@ class StrategyEngine:
         Returns:
             dict with action, confidence, signal_details, suggested_qty
         """
+        p = self.params
+
         if not bars or len(bars) < 50:
             return {
                 "pair": pair,
                 "action": "hold",
                 "confidence": 0.0,
-                "signal_details": {"ma": "insufficient_data", "rsi": "insufficient_data", "volume": "insufficient_data"},
+                "signal_details": {
+                    "ma": "insufficient_data",
+                    "rsi": "insufficient_data",
+                    "volume": "insufficient_data",
+                    "kronos": "insufficient_data",
+                },
                 "suggested_qty": 0.0,
                 "suggested_usdt": 0.0,
                 "current_price": 0.0,
@@ -72,35 +104,44 @@ class StrategyEngine:
         volumes = df["volume"]
         price_changes = closes.diff()
 
-        # --- Run indicators ---
-        ma_signal = ma_crossover(closes, fast=10, slow=30).iloc[-1]
-        rsi_val = rsi(closes, period=14).iloc[-1]
+        # --- Run indicators (using params) ---
+        ma_fast = p.get("ma_fast", 5)
+        ma_slow = p.get("ma_slow", 15)
+        rsi_period = p.get("rsi_period", 7)
+
+        ma_signal = ma_crossover(closes, fast=ma_fast, slow=ma_slow).iloc[-1]
+        rsi_val = rsi(closes, period=rsi_period).iloc[-1]
         vol_confirmed = volume_confirm(price_changes, volumes).iloc[-1]
+        kronos_result = self.kronos.forecast(bars, pair)
 
         # --- Score each indicator ---
         ma_score = 0.0
         rsi_score = 0.0
         vol_score = 0.0
+        kronos_score = 0.0
         signal_details: dict[str, str] = {}
 
         # MA crossover
         if ma_signal == "buy":
             ma_score = 1.0
-            signal_details["ma"] = "bullish_crossover"
+            signal_details["ma"] = f"bullish_cross({ma_fast}/{ma_slow})"
         elif ma_signal == "sell":
             ma_score = -1.0
-            signal_details["ma"] = "bearish_crossover"
+            signal_details["ma"] = f"bearish_cross({ma_fast}/{ma_slow})"
         else:
             signal_details["ma"] = "no_crossover"
 
         # RSI momentum
+        rsi_overbought = p.get("rsi_overbought", 70)
+        rsi_oversold = p.get("rsi_oversold", 30)
+
         if pd.isna(rsi_val):
             rsi_score = 0.0
             signal_details["rsi"] = "insufficient_data"
-        elif rsi_val < RSI_OVERSOLD:
+        elif rsi_val < rsi_oversold:
             rsi_score = 1.0
             signal_details["rsi"] = f"oversold({rsi_val:.1f})"
-        elif rsi_val > RSI_OVERBOUGHT:
+        elif rsi_val > rsi_overbought:
             rsi_score = -1.0
             signal_details["rsi"] = f"overbought({rsi_val:.1f})"
         elif 40 <= rsi_val <= 60:
@@ -115,7 +156,6 @@ class StrategyEngine:
 
         # Volume
         if vol_confirmed:
-            # Check direction
             if price_changes.iloc[-1] > 0:
                 vol_score = 1.0
                 signal_details["volume"] = "high_volume_bullish"
@@ -125,31 +165,59 @@ class StrategyEngine:
         else:
             signal_details["volume"] = "low_volume"
 
-        # --- Weighted score ---
-        raw_score = ma_score * MA_WEIGHT + rsi_score * RSI_WEIGHT + vol_score * VOL_WEIGHT
+        # Kronos ML forecast
+        kronos_dir = kronos_result.get("direction", "neutral")
+        kronos_conf = kronos_result.get("confidence", 0.0)
 
-        # --- Count aligned signals ---
-        bullish_count = sum(1 for s in [ma_score, rsi_score, vol_score] if s > 0)
-        bearish_count = sum(1 for s in [ma_score, rsi_score, vol_score] if s < 0)
+        if kronos_dir == "bullish":
+            kronos_score = kronos_conf  # Scale by confidence
+            signal_details["kronos"] = kronos_result.get("forecast_reasoning", "bullish")
+        elif kronos_dir == "bearish":
+            kronos_score = -kronos_conf
+            signal_details["kronos"] = kronos_result.get("forecast_reasoning", "bearish")
+        else:
+            kronos_score = 0.0
+            signal_details["kronos"] = kronos_result.get("forecast_reasoning", "neutral")
+
+        # --- Weighted score (4 indicators now) ---
+        ma_weight = p.get("ma_weight", 0.30)
+        rsi_weight = p.get("rsi_weight", 0.25)
+        vol_weight = p.get("vol_weight", 0.20)
+        kronos_weight = p.get("kronos_weight", 0.25)
+
+        raw_score = (
+            ma_score * ma_weight
+            + rsi_score * rsi_weight
+            + vol_score * vol_weight
+            + kronos_score * kronos_weight
+        )
+
+        # --- Count aligned signals (4 indicators) ---
+        scores = [ma_score, rsi_score, vol_score, kronos_score]
+        bullish_count = sum(1 for s in scores if s > 0)
+        bearish_count = sum(1 for s in scores if s < 0)
 
         # --- Determine action ---
+        min_signals = p.get("min_signals", 2)
+        cooldown_hours = p.get("cooldown_hours", 1)
+
         action = "hold"
         rationale = "insufficient signals"
         confidence = abs(raw_score)
 
-        if bullish_count >= MIN_SIGNALS and raw_score > 0.1:
+        if bullish_count >= min_signals and raw_score > 0.1:
             action = "buy"
-            rationale = f"{bullish_count}/3 bullish signals aligned"
-        elif bearish_count >= MIN_SIGNALS and raw_score < -0.1:
+            rationale = f"{bullish_count}/4 bullish signals aligned"
+        elif bearish_count >= min_signals and raw_score < -0.1:
             action = "sell"
-            rationale = f"{bearish_count}/3 bearish signals aligned"
+            rationale = f"{bearish_count}/4 bearish signals aligned"
 
         # --- Cooldown check ---
         if action == "buy":
             last = self.last_entry.get(pair)
-            if last and datetime.now(timezone.utc) - last < timedelta(hours=COOLDOWN_HOURS):
+            if last and datetime.now(timezone.utc) - last < timedelta(hours=cooldown_hours):
                 action = "hold"
-                rationale = f"cooldown active ({COOLDOWN_HOURS}h not elapsed)"
+                rationale = f"cooldown active ({cooldown_hours}h not elapsed)"
 
         # --- Position sizing ---
         max_trade_usdt = available_usdt * 0.20  # 20% max per trade
@@ -168,6 +236,7 @@ class StrategyEngine:
             "ma_signal": ma_signal,
             "raw_score": round(raw_score, 3),
             "rationale": rationale,
+            "kronos_predicted_close": kronos_result.get("predicted_close"),
         }
 
     def record_entry(self, pair: str) -> None:
