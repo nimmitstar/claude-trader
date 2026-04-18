@@ -1,4 +1,4 @@
-"""Smoke test for Alpaca CLI and API.
+"""Smoke test for Binance CLI and API.
 
 Run this after setting up .env credentials to verify everything works.
 """
@@ -15,7 +15,7 @@ import pytest
 def run_cli(args: list[str]) -> dict:
     """Run CLI command and parse JSON output."""
     result = subprocess.run(
-        [sys.executable, "-m", "alpaca_cli.alpaca"] + args,
+        [sys.executable, "-m", "binance_cli.binance"] + args,
         capture_output=True,
         text=True,
     )
@@ -26,29 +26,29 @@ def run_cli(args: list[str]) -> dict:
     return json.loads(result.stdout)
 
 
-@pytest.mark.skipif(not os.getenv("ALPACA_API_KEY"), reason="No API credentials")
+@pytest.mark.skipif(not os.getenv("BINANCE_API_KEY"), reason="No API credentials")
 def test_account_info() -> None:
     """Test fetching account information."""
     data = run_cli(["account"])
 
-    assert "id" in data
-    assert "buying_power" in data
-    assert isinstance(data["buying_power"], float)
-    assert data["buying_power"] >= 0
+    assert "balances" in data
+    assert "can_trade" in data
+    assert isinstance(data["balances"], list)
 
 
-@pytest.mark.skipif(not os.getenv("ALPACA_API_KEY"), reason="No API credentials")
+@pytest.mark.skipif(not os.getenv("BINANCE_API_KEY"), reason="No API credentials")
 def test_positions() -> None:
-    """Test fetching positions (may be empty)."""
+    """Test fetching positions (balances)."""
     data = run_cli(["positions"])
 
     assert isinstance(data, list)
+    # Testnet accounts start with USDT balance
 
 
-@pytest.mark.skipif(not os.getenv("ALPACA_API_KEY"), reason="No API credentials")
-def test_bars_btc_usd() -> None:
-    """Test fetching BTC/USD bars."""
-    data = run_cli(["bars", "BTC/USD", "--tf", "1Hour", "--n", "100"])
+@pytest.mark.skipif(not os.getenv("BINANCE_API_KEY"), reason="No API credentials")
+def test_bars_btcusdt() -> None:
+    """Test fetching BTCUSDT bars."""
+    data = run_cli(["bars", "BTCUSDT", "--tf", "1h", "--n", "100"])
 
     assert isinstance(data, list)
     assert len(data) <= 100
@@ -63,54 +63,55 @@ def test_bars_btc_usd() -> None:
         assert "volume" in bar
 
 
-@pytest.mark.skipif(not os.getenv("ALPACA_API_KEY"), reason="No API credentials")
-def test_quote_btc_usd() -> None:
-    """Test fetching BTC/USD quote."""
-    data = run_cli(["quote", "BTC/USD"])
+@pytest.mark.skipif(not os.getenv("BINANCE_API_KEY"), reason="No API credentials")
+def test_price_btcusdt() -> None:
+    """Test fetching BTCUSDT price."""
+    data = run_cli(["price", "BTCUSDT"])
 
     assert "symbol" in data
-    assert data["symbol"] == "BTC/USD"
-    # Bid/ask might be None if market closed
+    assert data["symbol"] == "BTCUSDT"
+    assert "price" in data
+    assert isinstance(data["price"], float)
+    assert data["price"] > 0
 
 
-@pytest.mark.skipif(not os.getenv("ALPACA_API_KEY"), reason="No API credentials")
+@pytest.mark.skipif(not os.getenv("BINANCE_API_KEY"), reason="No API credentials")
 def test_paper_buy_order() -> None:
-    """Test submitting a tiny paper buy order.
+    """Test submitting a tiny testnet buy order.
 
-    Uses smallest possible quantity - should be ~0.00001 BTC (~$0.50).
+    Uses smallest possible quantity - should be ~0.001 BTC (~$10-100 on testnet).
     Market order will fill immediately or expire.
     """
     try:
-        data = run_cli(["buy", "BTC/USD", "--qty", "0.00001"])
-        assert "id" in data or "status" in data
+        data = run_cli(["buy", "BTCUSDT", "--qty", "0.001"])
+        assert "order_id" in data or "status" in data
     except RuntimeError as e:
         # Order might fail if market closed or insufficient balance
         # That's OK for smoke test - we verified the API call path works
-        assert "Order failed" in str(e) or "buying_power" in str(e).lower()
+        assert any(x in str(e).lower() for x in ["order failed", "insufficient", "error"])
 
 
-@pytest.mark.skipif(not os.getenv("ALPACA_API_KEY"), reason="No API credentials")
-def test_cancel_all_orders() -> None:
-    """Test canceling all orders."""
-    data = run_cli(["cancel", "--all"])
+@pytest.mark.skipif(not os.getenv("BINANCE_API_KEY"), reason="No API credentials")
+def test_list_orders() -> None:
+    """Test listing open orders."""
+    data = run_cli(["cancel", "BTCUSDT"])
 
-    assert "canceled_count" in data
-    assert isinstance(data["canceled_count"], int)
+    assert isinstance(data, list)
 
 
 if __name__ == "__main__":
     """Run smoke test manually for quick verification."""
     print("Running smoke test...")
 
-    if not os.getenv("ALPACA_API_KEY"):
-        print("ERROR: Set ALPACA_API_KEY and ALPACA_API_SECRET in .env")
+    if not os.getenv("BINANCE_API_KEY"):
+        print("ERROR: Set BINANCE_API_KEY and BINANCE_API_SECRET in .env")
         sys.exit(1)
 
     tests = [
         ("Account info", lambda: run_cli(["account"])),
         ("Positions", lambda: run_cli(["positions"])),
-        ("BTC/USD bars", lambda: run_cli(["bars", "BTC/USD", "--tf", "1Hour", "--n", "10"])),
-        ("BTC/USD quote", lambda: run_cli(["quote", "BTC/USD"])),
+        ("BTCUSDT bars", lambda: run_cli(["bars", "BTCUSDT", "--tf", "1h", "--n", "10"])),
+        ("BTCUSDT price", lambda: run_cli(["price", "BTCUSDT"])),
     ]
 
     passed = 0

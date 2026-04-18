@@ -1,6 +1,6 @@
-# Alpaca Paper Trading — Claude + Kronos Trader — Step-by-Step Plan
+# Binance Testnet Trading — Claude + Kronos Trader — Step-by-Step Plan
 
-**What you asked for:** Claude trades crypto on Alpaca paper. Use [Kronos](https://github.com/shiyu-coder/Kronos) (foundation model for OHLCV forecasting) as the numerical engine. No hand-written strategy.
+**What you asked for:** Claude trades crypto on Binance Testnet. Use [Kronos](https://github.com/shiyu-coder/Kronos) (foundation model for OHLCV forecasting) as the numerical engine. No hand-written strategy.
 
 **What we're actually building:** an agentic trading bot with a **two-stage brain** — Kronos produces price forecasts, Claude reasons over those forecasts + account state + risk rules and decides trades. A scheduler triggers the whole thing. Still a bot; now with a much cleaner division of labor than before.
 
@@ -18,7 +18,7 @@ The prior plan had Claude staring at 100 raw OHLCV rows and deciding. That's ask
 | "Given this forecast distribution + my open position + overnight news + my risk limits, is this trade worth taking?" | Claude |
 | "Is this trade allowed by guardrails?" | Deterministic code |
 
-**The honest concern.** The Kronos repo publishes no accuracy benchmarks. 19k GitHub stars ≠ forecasting edge on BTC hourlies. Before we wire it into the loop we measure it — if Kronos beats trivial baselines (last-price persistence, 24h momentum, random walk) on out-of-sample Alpaca crypto data, keep it. If it ties or loses, we drop it into an optional lane, not the critical path. No model earns the car keys by vibes.
+**The honest concern.** The Kronos repo publishes no accuracy benchmarks. 19k GitHub stars ≠ forecasting edge on BTC hourlies. Before we wire it into the loop we measure it — if Kronos beats trivial baselines (last-price persistence, 24h momentum, random walk) on out-of-sample Binance data, keep it. If it ties or loses, we drop it into an optional lane, not the critical path. No model earns the car keys by vibes.
 
 ---
 
@@ -31,7 +31,7 @@ The prior plan had Claude staring at 100 raw OHLCV rows and deciding. That's ask
                            ▼
 ┌──────────────────────────────────────────────────────────────┐
 │  RUNNER (Python)                                             │
-│   1. Pull account/positions/orders/fills (Alpaca)            │
+│   1. Pull account/positions/orders/fills (Binance)           │
 │   2. Pull last 500 × 1h bars for each watchlist pair         │
 │   3. ── KRONOS ── predict next 24h (N sampled paths)         │
 │        ▸ derive: median path, 10th/90th percentile,          │
@@ -42,14 +42,14 @@ The prior plan had Claude staring at 100 raw OHLCV rows and deciding. That's ask
 │      + guardrails + last 24h journal                         │
 │   7. Claude returns JSON: list of orders + rationale each    │
 │   8. Validate orders against guardrails (reject violators)   │
-│   9. Place approved orders via Alpaca                        │
+│   9. Place approved orders via Binance                       │
 │  10. Persist to SQLite: decision, forecast, orders, fills    │
 │  11. Alert on Telegram for: trade opened, trade closed,      │
 │      guardrail rejection, any error                          │
 └──────────────────────────┬───────────────────────────────────┘
                            ▼
                 ┌─────────────────────────────┐
-                │  ALPACA PAPER (~$100k fake) │
+                │  BINANCE TESTNET (fake $)   │
                 └─────────────────────────────┘
 
 Side processes:
@@ -61,17 +61,17 @@ Side processes:
 
 ## 2. Phase plan (in order)
 
-### Phase 1 — Alpaca paper account (30 min)
-Create account → enable Paper Trading + Crypto → generate paper API key → store in `.env`. These keys cannot touch real money. $100k starting fake balance.
+### Phase 1 — Binance Testnet account (15 min)
+Create account at https://testnet.binance.vision → generate API key → store in `.env`. Testnet credentials cannot touch real money. Testnet accounts come pre-loaded with fake test funds.
 
-### Phase 2 — Alpaca access layer (2–4 hours)
-Build a CLI wrapper (`alpaca.py`) around `alpaca-py`. Subcommands: `account`, `positions`, `bars`, `quote`, `buy`, `sell`, `cancel`. Claude shells out to this. Port to a proper MCP later if useful. Smoke test: read account, pull BTC/USD bars, submit a tiny test order.
+### Phase 2 — Binance access layer (2–4 hours)
+Build a CLI wrapper (`binance.py`) around `python-binance`. Subcommands: `account`, `positions`, `bars`, `price`, `buy`, `sell`, `cancel`. Claude shells out to this. Port to a proper MCP later if useful. Smoke test: read account, pull BTCUSDT bars, submit a tiny test order.
 
 ### Phase 3 — **Kronos evaluation sprint** (1–2 days) ← critical gate
 Before wiring Kronos into the trading loop, prove it works on *our* data.
 
 1. `pip install` Kronos requirements, download `Kronos-small` (24.7M, fits on CPU) from HuggingFace.
-2. Pull **6 months** of 1h bars for BTC/USD, ETH/USD, SOL/USD, LTC/USD, DOGE/USD from Alpaca.
+2. Pull **6 months** of 1h bars for BTCUSDT, ETHUSDT, SOLUSDT, LTCUSDT, DOGEUSDT from Binance.
 3. **Walk-forward evaluation** — for each of, say, 200 random timestamps in the last month:
    - Feed Kronos the prior 500 bars
    - Get its 24h forecast (median of 20 sampled paths)
@@ -98,7 +98,7 @@ Deliverable: a short report (`kronos-eval.md`) with a table of results. This bec
     "market_read": "one-paragraph assessment across watchlist",
     "orders": [
       {
-        "symbol": "BTC/USD",
+        "symbol": "BTCUSDT",
         "side": "buy",
         "qty_usd": 2500,
         "order_type": "limit",
@@ -127,7 +127,7 @@ Enforced in runner code, NOT in prompt:
 
 Test each guardrail with a unit test before Phase 6.
 
-### Phase 6 — Enable paper order placement (instant flip)
+### Phase 6 — Enable testnet order placement (instant flip)
 Change one config line: `DRY_RUN=true` → `false`. First day: watch every run live.
 
 ### Phase 7 — Scheduler + observability (half day)
@@ -149,7 +149,7 @@ Required before we even *discuss* real money:
 - Forecasts still beating baselines
 - Rationales read like a thoughtful trader, not a pattern-match
 
-Miss any of these → stay on paper. Fail repeatedly → retire the approach.
+Miss any of these → stay on testnet. Fail repeatedly → retire the approach.
 
 ---
 
@@ -158,25 +158,25 @@ Miss any of these → stay on paper. Fail repeatedly → retire the approach.
 The prompt is the highest-leverage thing we write. First version:
 
 ```
-You are a disciplined crypto trader operating a paper account. You prioritize
+You are a disciplined crypto trader operating a testnet account. You prioritize
 capital preservation over home runs. You only trade when the forecast and
 risk/reward are both favorable; otherwise you hold.
 
 === ACCOUNT ===
 Equity: $102,340
-Buying power: $58,220
+USDT available: $58,220
 Open positions:
-  BTC/USD: 0.062 @ avg 63,400 | current 64,710 | unrealized +$81 (+2.07%)
-  ETH/USD: 1.45 @ avg 3,220  | current 3,185  | unrealized -$51 (-1.09%)
+  BTCUSDT: 0.062 @ avg 63,400 | current 64,710 | unrealized +$81 (+2.07%)
+  ETHUSDT: 1.45 @ avg 3,220  | current 3,185  | unrealized -$51 (-1.09%)
 
 === KRONOS FORECAST (24h horizon, 20 sampled paths) ===
-BTC/USD  current $64,710
+BTCUSDT  current $64,710
   Median 6h:  +0.3%   |  12h: +1.1%   |  24h: +2.8%
   10th pct:  -1.4%,  -2.1%,  -2.9%
   90th pct:  +2.0%,  +3.8%,  +6.2%
   Path variance: LOW (forecasts tightly clustered)
 
-ETH/USD  current $3,185
+ETHUSDT  current $3,185
   Median 6h:  -0.1%   |  12h: -0.4%   |  24h: -0.2%
   10th pct:  -3.0%,  -4.2%,  -5.1%
   90th pct:  +2.5%,  +3.1%,  +4.3%
@@ -214,12 +214,18 @@ Kronos is local compute, no token cost. Claude's input shrinks (summary stats in
 
 Kronos-small on CPU: ~30–60s per watchlist inference pass. Kronos-base: add a small GPU ($5–10/mo VPS with GPU, or run locally on a modern Mac).
 
+**Binance Testnet fees:** None — it's a test environment.
+**Binance Production fees (future reference):**
+- Maker: 0.10% (limit orders that provide liquidity)
+- Taker: 0.10% (market orders that take liquidity)
+- BNB discount: 25% off if paying fees in BNB
+
 ---
 
 ## 5. Risks (what's different with Kronos in the loop)
 
 | Failure | Likelihood | Mitigation |
-|---|---|---|
+|---|---|
 | Kronos has no real edge on crypto (just interpolates noise) | **Medium-High** | Phase 3 eval sprint; weekly re-validation; baselines as fallback |
 | Claude over-trusts the forecast on a high-variance prediction | Medium | Include path variance in prompt; explicit "low confidence → hold" rule |
 | Forecast goes stale (crypto regime changes) | Medium | Weekly re-eval; auto-disable Kronos if rolling accuracy drops below baseline |
@@ -237,14 +243,14 @@ The first row is the big one. If Kronos doesn't actually forecast better than "t
 ## 6. What the repo will look like
 
 ```
-alpaca-trader/
-├── .env                          # Alpaca paper keys (gitignored)
+binance-trader/
+├── .env                          # Binance testnet keys (gitignored)
 ├── .env.example
 ├── .gitignore
 ├── README.md
 ├── pyproject.toml
-├── alpaca_cli/
-│   └── alpaca.py                 # CLI wrapper Claude calls
+├── binance_cli/
+│   └── binance.py                # CLI wrapper Claude calls
 ├── kronos_service/
 │   ├── forecast.py               # wrapper around KronosPredictor
 │   └── cache.py                  # cache forecasts to avoid redundant inference
@@ -270,7 +276,7 @@ alpaca-trader/
 
 ## 7. What I will NOT do
 
-- Trade real money until ≥ 4 weeks of paper with the Phase 9 metrics met
+- Trade real money until ≥ 4 weeks of testnet with the Phase 9 metrics met
 - Pick coins for you in the plan (Claude picks at runtime; you pick the watchlist)
 - Store your API keys in memory
 - Skip the Kronos evaluation sprint because the repo "looks cool"
@@ -282,7 +288,7 @@ alpaca-trader/
 
 1. **Kronos variant:** `Kronos-small` (24.7M, CPU-friendly, my recommendation) or `Kronos-base` (102.3M, more capable, probably wants GPU)?
 2. **Phase 3 eval depth:** full walk-forward with 200 windows (1–2 days, thorough) or a quick 50-window pilot first (2–3 hours, gets us to a go/no-go faster)?
-3. **Watchlist:** BTC/USD, ETH/USD, SOL/USD, LTC/USD, DOGE/USD — confirm or change?
-4. **Start building now?** If yes, I'll scaffold the repo, write the Alpaca CLI wrapper, pull 6mo of bars for the eval, and we'll have Phase 3 results to look at in this session.
+3. **Watchlist:** BTCUSDT, ETHUSDT, SOLUSDT, LTCUSDT, DOGEUSDT — confirm or change?
+4. **Start building now?** If yes, I'll scaffold the repo, write the Binance CLI wrapper, pull 6mo of bars for the eval, and we'll have Phase 3 results to look at in this session.
 
 My strong recommendations: **Kronos-small, quick pilot first, the watchlist above, yes start now.** Tell me if that works and I'll go.

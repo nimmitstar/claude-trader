@@ -73,5 +73,5 @@ models/
 *.csv
 !examples/*.csv
 
-# Alpaca specific
-alpaca_credentials.json
+# Exchange specific
+*_credentials.json
