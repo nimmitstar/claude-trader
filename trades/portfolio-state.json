@@ -11,7 +11,7 @@
         "ma": "no_crossover",
         "rsi": "oversold(28.1)",
         "volume": "low_volume",
-        "kronos": "model_load_failed"
+        "kronos": "kronos_predicts_flat_0.05%"
       },
       "suggested_qty": 0.268167,
       "suggested_usdt": 17860.66,
@@ -20,7 +20,7 @@
       "ma_signal": "hold",
       "raw_score": 0.25,
       "rationale": "insufficient signals",
-      "kronos_predicted_close": null,
+      "kronos_predicted_close": "66636.26",
       "executed": false,
       "order_result": null
     },
@@ -32,7 +32,7 @@
         "ma": "no_crossover",
         "rsi": "weak_bearish(32.6)",
         "volume": "low_volume",
-        "kronos": "model_load_failed"
+        "kronos": "kronos_predicts_flat_0.17%"
       },
       "suggested_qty": 8.72388,
       "suggested_usdt": 17860.66,
@@ -41,33 +41,33 @@
       "ma_signal": "hold",
       "raw_score": 0.075,
       "rationale": "insufficient signals",
-      "kronos_predicted_close": null,
+      "kronos_predicted_close": "2050.9",
       "executed": false,
       "order_result": null
     },
     {
       "pair": "SOLUSDT",
       "action": "hold",
-      "confidence": 0.0,
+      "confidence": 0.07,
       "signal_details": {
         "ma": "no_crossover",
         "rsi": "neutral(50.3)",
         "volume": "low_volume",
-        "kronos": "model_load_failed"
+        "kronos": "kronos_predicts_down_0.56%"
       },
       "suggested_qty": 224.91703,
       "suggested_usdt": 17860.66,
       "current_price": 79.41,
       "rsi": 50.3,
       "ma_signal": "hold",
-      "raw_score": 0.0,
+      "raw_score": -0.07,
       "rationale": "insufficient signals",
-      "kronos_predicted_close": null,
+      "kronos_predicted_close": "78.97",
       "executed": false,
       "order_result": null
     }
   ],
   "trades_executed": [],
   "dry_run": true,
-  "updated": "2026-04-18T16:22:15.421440+00:00"
+  "updated": "2026-04-18T16:33:18.677721+00:00"
 }

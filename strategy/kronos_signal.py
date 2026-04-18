@@ -3,7 +3,8 @@
 Kronos is a foundation model for financial K-line forecasting:
 https://github.com/shiyu-coder/Kronos
 
-Uses Kronos-small (24.7M params) for CPU-friendly inference.
+Uses Kronos-small (24.7M params) with Kronos-Tokenizer-base.
+Falls back gracefully to 3-indicator mode if model unavailable.
 """
 
 from __future__ import annotations
@@ -20,26 +21,26 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 30
 
+# Model repos
+KRONOS_MODEL_REPO = "NeoQuasar/Kronos-small"
+KRONOS_TOKENIZER_REPO = "NeoQuasar/Kronos-Tokenizer-base"
+
 
 class KronosSignal:
-    """Kronos-based price forecasting signal.
-
-    Outputs direction (bullish/bearish/neutral), confidence 0-1,
-    predicted close price, and reasoning.
-    """
+    """Kronos-based price forecasting signal."""
 
     _tokenizer = None
     _model = None
     _predictor = None
     _load_failed = False
-    _model_name = "NeoQuasar/Kronos-small"
 
-    def __init__(self, model_name: str | None = None, timeout: int = DEFAULT_TIMEOUT) -> None:
-        self._model_name = model_name or self._model_name
+    def __init__(self, model_name: str | None = None, tokenizer_name: str | None = None, timeout: int = DEFAULT_TIMEOUT) -> None:
+        self._model_name = model_name or KRONOS_MODEL_REPO
+        self._tokenizer_name = tokenizer_name or KRONOS_TOKENIZER_REPO
         self._timeout = timeout
 
     @classmethod
-    def load_model(cls, model_name: str | None = None) -> bool:
+    def load_model(cls, model_name: str | None = None, tokenizer_name: str | None = None) -> bool:
         """Load Kronos model (singleton)."""
         if cls._model is not None:
             return True
@@ -47,26 +48,43 @@ class KronosSignal:
             return False
 
         try:
-            name = model_name or cls._model_name
             # Add Kronos repo to path
             kronos_path = Path("/tmp/Kronos")
             if kronos_path.exists() and str(kronos_path) not in sys.path:
                 sys.path.insert(0, str(kronos_path))
 
-            from model import KronosTokenizer, KronosPredictor
-            from huggingface_hub import hf_hub_download
-            import json
+            from model import KronosTokenizer, Kronos, KronosPredictor
+            from model.kronos import calc_time_stamps as _orig_calc_time_stamps
 
-            # Load model config
-            config_path = hf_hub_download(name, "config.json")
-            with open(config_path) as f:
-                config = json.load(f)
+            # Monkey-patch Kronos bug: .dt accessor doesn't work on DatetimeIndex
+            def _patched_calc_time_stamps(x_timestamp):
+                ts_series = pd.Series(x_timestamp)
+                time_df = pd.DataFrame()
+                time_df['minute'] = ts_series.dt.minute
+                time_df['hour'] = ts_series.dt.hour
+                time_df['weekday'] = ts_series.dt.weekday
+                time_df['day'] = ts_series.dt.day
+                time_df['month'] = ts_series.dt.month
+                return time_df
 
-            logger.info(f"Loading Kronos model: {name}")
-            cls._tokenizer = KronosTokenizer(**config["tokenizer_config"])
-            cls._predictor = KronosPredictor(name, cls._tokenizer)
+            import model.kronos as _kronos_mod
+            _kronos_mod.calc_time_stamps = _patched_calc_time_stamps
+
+            m_repo = model_name or KRONOS_MODEL_REPO
+            t_repo = tokenizer_name or KRONOS_TOKENIZER_REPO
+
+            logger.info(f"Loading Kronos tokenizer: {t_repo}")
+            cls._tokenizer = KronosTokenizer.from_pretrained(t_repo)
+
+            logger.info(f"Loading Kronos model: {m_repo}")
+            cls._model = Kronos.from_pretrained(m_repo)
+            cls._model.eval()
+
+            logger.info("Creating Kronos predictor")
+            cls._predictor = KronosPredictor(cls._model, cls._tokenizer)
             logger.info("Kronos model loaded successfully")
             return True
+
         except Exception as e:
             cls._load_failed = True
             logger.warning(f"Failed to load Kronos model: {e}")
@@ -90,7 +108,7 @@ class KronosSignal:
                 "forecast_reasoning": f"insufficient_data ({len(bars)} < 32 bars)",
             }
 
-        if self._model is None and not self.load_model(self._model_name):
+        if self._model is None and not self.load_model(self._model_name, self._tokenizer_name):
             return {
                 "direction": "neutral",
                 "confidence": 0.0,
@@ -100,23 +118,37 @@ class KronosSignal:
 
         try:
             df = pd.DataFrame(bars)
-            closes = df["close"].values
-            current_price = closes[-1]
+            current_price = df["close"].iloc[-1]
 
-            # Kronos expects OHLCV data as numpy array
-            # Shape: (seq_len, 5) — [open, high, low, close, volume]
-            ohlcv = df[["open", "high", "low", "close", "volume"]].values
-            recent = ohlcv[-64:]  # Last 64 bars
+            # Build DataFrame with required columns
+            recent = df[["open", "high", "low", "close", "volume"]].tail(64).copy()
+            recent.columns = ["open", "high", "low", "close", "volume"]
 
-            # Run prediction
-            prediction = self._predictor.predict(recent, pred_len=4)
+            # Build timestamps (tz-naive — Kronos calc_time_stamps uses .dt accessor)
+            now = pd.Timestamp.now()
+            x_timestamp = pd.date_range(
+                end=now - pd.Timedelta(minutes=15),
+                periods=len(recent),
+                freq="15min",
+            )
+            y_timestamp = pd.date_range(
+                start=now,
+                periods=4,
+                freq="15min",
+            )
 
-            # prediction is predicted future OHLCV
-            # Use the close price of the last predicted bar
-            if isinstance(prediction, np.ndarray) and prediction.ndim >= 2:
-                predicted_close = prediction[-1, 3]  # Last bar, close column
-            else:
-                predicted_close = float(prediction)
+            # Run prediction (pred_len=4 = 1 hour of 15min candles)
+            pred_df = self._predictor.predict(
+                recent,
+                x_timestamp,
+                y_timestamp,
+                pred_len=4,
+                verbose=False,
+            )
+
+            # Get predicted close prices
+            predicted_closes = pred_df["close"].values
+            predicted_close = predicted_closes[-1]
 
             if not np.isfinite(predicted_close) or predicted_close <= 0:
                 return {
@@ -153,16 +185,24 @@ class KronosSignal:
                 "direction": "neutral",
                 "confidence": 0.0,
                 "predicted_close": None,
-                "forecast_reasoning": f"inference_error: {type(e).__name__}",
+                "forecast_reasoning": f"inference_error: {type(e).__name__}: {e}",
             }
 
 
 _kronos_instance: KronosSignal | None = None
 
 
-def get_kronos_signal(model_name: str | None = None, timeout: int = DEFAULT_TIMEOUT) -> KronosSignal:
+def get_kronos_signal(
+    model_name: str | None = None,
+    tokenizer_name: str | None = None,
+    timeout: int = DEFAULT_TIMEOUT,
+) -> KronosSignal:
     """Get singleton Kronos signal instance."""
     global _kronos_instance
     if _kronos_instance is None:
-        _kronos_instance = KronosSignal(model_name=model_name, timeout=timeout)
+        _kronos_instance = KronosSignal(
+            model_name=model_name,
+            tokenizer_name=tokenizer_name,
+            timeout=timeout,
+        )
     return _kronos_instance
