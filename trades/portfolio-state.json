@@ -62,6 +62,6 @@
     }
   ],
   "trades_executed": [],
-  "dry_run": false,
-  "updated": "2026-04-18T15:36:11.085069+00:00"
+  "dry_run": true,
+  "updated": "2026-04-18T16:07:12.027759+00:00"
 }

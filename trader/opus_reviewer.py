@@ -57,12 +57,29 @@ def main() -> dict:
                 continue
 
             # Output prompt for cron session to feed to Opus
-            print(f"=== OPUS REVIEW REQUEST ===")
+            print("=== OPUS REVIEW REQUEST ===")
             print(f"Trade: {trade.get('pair')} {trade.get('action')} @ {trade.get('price')}")
             print(f"Confidence: {trade.get('confidence')}")
             print(f"Prompt length: {len(prompt)} chars")
-            print(f"=== END REQUEST ===")
+            print("=== END REQUEST ===")
             print()
 
             file_results.append({
-                "trade": f\"{trade.get('pair')} {trade.get('action')}\",\n                \"status\": \"needs_opus_call\",\n                \"review_file\": str(review_file),\n            })\n\n        results.extend(file_results)\n\n    return {\n        \"status\": \"reviews_queued\",\n        \"pending_files\": len(pending),\n        \"reviews\": results,\n        \"audit_trail\": get_audit_trail(5),\n    }\n\n\nif __name__ == \"__main__\":\n    result = main()\n    print(json.dumps(result, indent=2))\n
+                "trade": f"{trade.get('pair')} {trade.get('action')}",
+                "status": "needs_opus_call",
+                "review_file": str(review_file),
+            })
+
+        results.extend(file_results)
+
+    return {
+        "status": "reviews_queued",
+        "pending_files": len(pending),
+        "reviews": results,
+        "audit_trail": get_audit_trail(5),
+    }
+
+
+if __name__ == "__main__":
+    result = main()
+    print(json.dumps(result, indent=2))

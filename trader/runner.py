@@ -20,8 +20,29 @@ from strategy.risk import Order, check_risk
 from trader.log import TRADES_DIR, log_trade, save_portfolio_state
 
 PAIRS = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+PAIR_ASSETS = {"BTCUSDT": "BTC", "ETHUSDT": "ETH", "SOLUSDT": "SOL"}
 TIMEFRAME = "1h"
 NUM_BARS = 200
+
+# Track open SL/TP order IDs: {pair: {"sl": order_id, "tp": order_id}}
+_open_sl_tp_orders: dict[str, dict[str, int]] = {}
+
+
+def cancel_sl_tp_orders(pair: str) -> None:
+    """Cancel any open SL/TP orders for a pair."""
+    global _open_sl_tp_orders
+    if pair not in _open_sl_tp_orders:
+        return
+    client = get_client()
+    for order_type in ("sl", "tp"):
+        order_id = _open_sl_tp_orders[pair].get(order_type)
+        if order_id:
+            try:
+                client.cancel_order(symbol=pair, orderId=order_id)
+                print(f"  ↩️ Cancelled {order_type.upper()} order {order_id} for {pair}")
+            except Exception:
+                pass  # order may already be filled/cancelled
+    del _open_sl_tp_orders[pair]
 
 
 def fetch_bars(symbol: str, tf: str = TIMEFRAME, n: int = NUM_BARS) -> list[dict]:
@@ -154,17 +175,52 @@ def run(dry_run: bool = True) -> dict:
             price = signal["current_price"]
             side = signal["action"]
 
-            # Round qty to lot step size
+            # Get exchange info for lot size and min notional
+            step_size = 0.001
+            min_notional = 5.0
             try:
                 _client = get_client()
                 info = _client.get_symbol_info(pair)
-                lot_size = next(f for f in info['filters'] if f['filterType'] == 'LOT_SIZE')
-                step_size = float(lot_size['stepSize'])
+                for f in info['filters']:
+                    if f['filterType'] == 'LOT_SIZE':
+                        step_size = float(f['stepSize'])
+                    elif f['filterType'] == 'MIN_NOTIONAL':
+                        min_notional = float(f['minNotional'])
+
+                # Round qty to lot step size
                 qty = round(qty / step_size) * step_size
                 decimals = len(str(step_size).rstrip('0').split('.')[-1])
                 qty = float(f"{qty:.{decimals}}f")
+
+                # Fix #5: lot size → zero qty guard
+                if qty < step_size:
+                    print(f"  ❌ Quantity {qty} below minimum lot size {step_size}")
+                    result["risk_reason"] = "qty_below_lot_minimum"
+                    results.append(result)
+                    continue
+
+                # Fix #6: min notional check
+                order_value = qty * price
+                if order_value < min_notional:
+                    print(f"  ❌ Order value ${order_value:.2f} below minimum ${min_notional}")
+                    result["risk_reason"] = "below_min_notional"
+                    results.append(result)
+                    continue
             except Exception:
                 pass  # fallback to unrounded qty
+
+            # Fix #2: sell without position check
+            if side == "sell":
+                asset = PAIR_ASSETS.get(pair)
+                if asset:
+                    held = account["balances"].get(asset, {}).get("free", 0)
+                    if qty > held:
+                        qty = held
+                    if qty <= 0:
+                        print(f"  ❌ No {asset} to sell")
+                        result["risk_reason"] = "no_position"
+                        results.append(result)
+                        continue
 
             order = Order(pair=pair, side=side, qty=qty, price=price)
             risk = check_risk(positions, order, total_value, usdt_available)
@@ -194,6 +250,52 @@ def run(dry_run: bool = True) -> dict:
                         "order_id": order_res["orderId"],
                         "status": order_res["status"],
                     }
+
+                    # Fix #1: Place SL/TP as actual exchange orders after buy
+                    sl_order_id = None
+                    tp_order_id = None
+                    if side == "buy":
+                        entry_price = float(order_res.get("fills", [{}])[0].get("price", price))
+                        stop_loss_pct = risk["stop_loss"] / entry_price * 100 if entry_price > 0 else 3.0
+                        take_profit_pct = (risk["take_profit"] / entry_price - 1) * 100 if entry_price > 0 else 6.0
+                        sl_price = entry_price * (1 - abs(stop_loss_pct) / 100)
+                        tp_price = entry_price * (1 + abs(take_profit_pct) / 100)
+
+                        try:
+                            sl_order = client.create_order(
+                                symbol=pair, side="SELL", type="STOP_MARKET",
+                                quantity=qty, stopPrice=str(round(sl_price, 2)),
+                                timeInForce="GTC",
+                            )
+                            sl_order_id = sl_order["orderId"]
+                            print(f"  🛡️ SL order placed @ {sl_price:.2f} (id: {sl_order_id})")
+                        except Exception as e:
+                            print(f"  ⚠️ SL order failed: {e}")
+
+                        try:
+                            tp_order = client.create_order(
+                                symbol=pair, side="SELL", type="TAKE_PROFIT_MARKET",
+                                quantity=qty, stopPrice=str(round(tp_price, 2)),
+                                timeInForce="GTC",
+                            )
+                            tp_order_id = tp_order["orderId"]
+                            print(f"  🎯 TP order placed @ {tp_price:.2f} (id: {tp_order_id})")
+                        except Exception as e:
+                            print(f"  ⚠️ TP order failed: {e}")
+
+                        if sl_order_id or tp_order_id:
+                            _open_sl_tp_orders[pair] = {
+                                "sl": sl_order_id,
+                                "tp": tp_order_id,
+                            }
+
+                    elif side == "sell":
+                        # Cancel SL/TP orders before selling
+                        cancel_sl_tp_orders(pair)
+
+                    trade_entry["sl_order_id"] = sl_order_id
+                    trade_entry["tp_order_id"] = tp_order_id
+
                     log_trade(trade_entry)
                     executed_trades.append(trade_entry)
 
@@ -202,6 +304,10 @@ def run(dry_run: bool = True) -> dict:
                         usdt_available -= qty * price
                     else:
                         usdt_available += qty * price
+
+                    # Fix #4: re-fetch actual balance after trade
+                    account = get_account_info()
+                    usdt_available = account["usdt_available"]
 
                     print(f"  ✅ Executed: {side} {qty} {pair} @ {price}")
                     result["executed"] = True
