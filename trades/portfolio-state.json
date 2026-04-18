@@ -1,0 +1,67 @@
+{
+  "total_value_usdt": 89303.30681,
+  "usdt_available": 89303.30681,
+  "positions": [],
+  "signals": [
+    {
+      "pair": "BTCUSDT",
+      "action": "hold",
+      "confidence": 0.0,
+      "signal_details": {
+        "ma": "no_crossover",
+        "rsi": "neutral(57.2)",
+        "volume": "low_volume"
+      },
+      "suggested_qty": 0.248449,
+      "suggested_usdt": 17860.66,
+      "current_price": 71888.68,
+      "rsi": 57.2,
+      "ma_signal": "hold",
+      "raw_score": 0.0,
+      "rationale": "insufficient signals",
+      "executed": false,
+      "order_result": null
+    },
+    {
+      "pair": "ETHUSDT",
+      "action": "hold",
+      "confidence": 0.0,
+      "signal_details": {
+        "ma": "no_crossover",
+        "rsi": "neutral(54.1)",
+        "volume": "low_volume"
+      },
+      "suggested_qty": 8.093173,
+      "suggested_usdt": 17860.66,
+      "current_price": 2206.88,
+      "rsi": 54.1,
+      "ma_signal": "hold",
+      "raw_score": 0.0,
+      "rationale": "insufficient signals",
+      "executed": false,
+      "order_result": null
+    },
+    {
+      "pair": "SOLUSDT",
+      "action": "hold",
+      "confidence": 0.15,
+      "signal_details": {
+        "ma": "bullish_crossover",
+        "rsi": "neutral(59.1)",
+        "volume": "high_volume_bearish"
+      },
+      "suggested_qty": 212.931108,
+      "suggested_usdt": 17860.66,
+      "current_price": 83.88,
+      "rsi": 59.1,
+      "ma_signal": "buy",
+      "raw_score": 0.15,
+      "rationale": "insufficient signals",
+      "executed": false,
+      "order_result": null
+    }
+  ],
+  "trades_executed": [],
+  "dry_run": false,
+  "updated": "2026-04-18T15:36:11.085069+00:00"
+}

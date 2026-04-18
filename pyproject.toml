@@ -30,6 +30,7 @@ transformer = [
 
 [project.scripts]
 binance = "binance_cli.binance:cli"
+trader = "trader.runner:main"
 
 [build-system]
 requires = ["hatchling"]
