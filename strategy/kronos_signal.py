@@ -10,9 +10,7 @@ Falls back gracefully to 3-indicator mode if model unavailable.
 from __future__ import annotations
 
 import logging
-import sys
 from datetime import datetime, timezone
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -48,27 +46,7 @@ class KronosSignal:
             return False
 
         try:
-            # Add Kronos repo to path
-            kronos_path = Path("/tmp/Kronos")
-            if kronos_path.exists() and str(kronos_path) not in sys.path:
-                sys.path.insert(0, str(kronos_path))
-
-            from model import KronosTokenizer, Kronos, KronosPredictor
-            from model.kronos import calc_time_stamps as _orig_calc_time_stamps
-
-            # Monkey-patch Kronos bug: .dt accessor doesn't work on DatetimeIndex
-            def _patched_calc_time_stamps(x_timestamp):
-                ts_series = pd.Series(x_timestamp)
-                time_df = pd.DataFrame()
-                time_df['minute'] = ts_series.dt.minute
-                time_df['hour'] = ts_series.dt.hour
-                time_df['weekday'] = ts_series.dt.weekday
-                time_df['day'] = ts_series.dt.day
-                time_df['month'] = ts_series.dt.month
-                return time_df
-
-            import model.kronos as _kronos_mod
-            _kronos_mod.calc_time_stamps = _patched_calc_time_stamps
+            from kronos_model import KronosTokenizer, Kronos, KronosPredictor
 
             m_repo = model_name or KRONOS_MODEL_REPO
             t_repo = tokenizer_name or KRONOS_TOKENIZER_REPO
