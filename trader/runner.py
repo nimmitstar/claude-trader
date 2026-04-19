@@ -19,12 +19,12 @@ from strategy.opus import (
 from strategy.risk import Order, check_risk
 from trader.log import TRADES_DIR, log_trade, save_portfolio_state
 
-PAIRS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "SUIUSDT", "AAVEUSDT", "LINKUSDT", "ADAUSDT", "FETUSDT"]
+PAIRS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "SUIUSDT", "AAVEUSDT", "LINKUSDT", "ADAUSDT", "FETUSDT", "DOTUSDT", "APTUSDT", "NEARUSDT"]
 PAIR_ASSETS = {
     "BTCUSDT": "BTC", "ETHUSDT": "ETH", "SOLUSDT": "SOL",
     "XRPUSDT": "XRP", "BNBUSDT": "BNB", "SUIUSDT": "SUI",
     "AAVEUSDT": "AAVE", "LINKUSDT": "LINK", "ADAUSDT": "ADA",
-    "FETUSDT": "FET",
+    "FETUSDT": "FET", "DOTUSDT": "DOT", "APTUSDT": "APT", "NEARUSDT": "NEAR",
 }
 TIMEFRAME = "15m"
 NUM_BARS = 200
