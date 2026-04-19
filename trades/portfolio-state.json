@@ -5,24 +5,26 @@
   "signals": [
     {
       "pair": "BTCUSDT",
-      "action": "hold",
-      "confidence": 0.3,
+      "action": "buy",
+      "confidence": 0.326,
       "signal_details": {
         "ma": "bullish_cross(5/15)",
         "rsi": "neutral(51.2)",
         "volume": "low_volume",
-        "kronos": "kronos_predicts_flat_0.05%"
+        "kronos": "kronos_predicts_up_0.21%"
       },
       "suggested_qty": 0.257811,
       "suggested_usdt": 17860.66,
       "current_price": 69278.12,
       "rsi": 51.2,
       "ma_signal": "buy",
-      "raw_score": 0.3,
-      "rationale": "insufficient signals",
-      "kronos_predicted_close": "69313.4",
+      "raw_score": 0.326,
+      "rationale": "2/4 bullish signals aligned",
+      "kronos_predicted_close": "69422.7",
       "executed": false,
-      "order_result": null
+      "order_result": {
+        "error": "APIError(code=-1111): Parameter 'quantity' has too much precision."
+      }
     },
     {
       "pair": "ETHUSDT",
@@ -32,7 +34,7 @@
         "ma": "bullish_cross(5/15)",
         "rsi": "neutral(50.6)",
         "volume": "low_volume",
-        "kronos": "kronos_predicts_flat_-0.00%"
+        "kronos": "kronos_predicts_flat_0.11%"
       },
       "suggested_qty": 8.495812,
       "suggested_usdt": 17860.66,
@@ -41,7 +43,7 @@
       "ma_signal": "buy",
       "raw_score": 0.3,
       "rationale": "insufficient signals",
-      "kronos_predicted_close": "2102.24",
+      "kronos_predicted_close": "2104.63",
       "executed": false,
       "order_result": null
     },
@@ -53,7 +55,7 @@
         "ma": "bullish_cross(5/15)",
         "rsi": "neutral(54.4)",
         "volume": "low_volume",
-        "kronos": "kronos_predicts_flat_0.07%"
+        "kronos": "kronos_predicts_flat_-0.06%"
       },
       "suggested_qty": 202.593709,
       "suggested_usdt": 17860.66,
@@ -62,12 +64,12 @@
       "ma_signal": "buy",
       "raw_score": 0.3,
       "rationale": "insufficient signals",
-      "kronos_predicted_close": "88.22",
+      "kronos_predicted_close": "88.11",
       "executed": false,
       "order_result": null
     }
   ],
   "trades_executed": [],
   "dry_run": false,
-  "updated": "2026-04-19T00:52:18.535311+00:00"
+  "updated": "2026-04-19T00:53:22.494568+00:00"
 }

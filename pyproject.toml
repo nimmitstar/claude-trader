@@ -1,5 +1,5 @@
 [project]
-name = "alpaca-claude-trader"
+name = "claude-trader"
 version = "0.1.0"
 description = "Kronos ensemble trading system on Binance Testnet"
 readme = "README.md"

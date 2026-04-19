@@ -58,7 +58,7 @@ def json_output(data: object) -> None:
 
 
 @click.group()
-@click.version_option(package_name="alpaca-claude-trader")
+@click.version_option(package_name="claude-trader")
 def cli() -> None:
     """Binance trading CLI - JSON output only."""
     pass
