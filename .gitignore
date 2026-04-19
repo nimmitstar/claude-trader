@@ -75,3 +75,6 @@ models/
 
 # Exchange specific
 *_credentials.json
+
+# Trade logs (testnet data, not needed in repo)
+trades/
