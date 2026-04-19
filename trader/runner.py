@@ -81,17 +81,9 @@ def fetch_bars(symbol: str, tf: str = TIMEFRAME, n: int = NUM_BARS) -> list[dict
         "4h": client.KLINE_INTERVAL_4HOUR,
         "1d": client.KLINE_INTERVAL_1DAY,
     }
-    end = datetime.now(timezone.utc)
-    start = end - timedelta(days=30)
-    klines = client.get_historical_klines(
-        symbol,
-        tf_map[tf],
-        start_str=start.strftime("%d %b %Y %H:%M:%S"),
-        end_str=end.strftime("%d %b %Y %H:%M:%S"),
-        limit=n,
-    )
+    klines = client.get_klines(symbol=symbol, interval=tf_map[tf], limit=n)
     bars = []
-    for k in klines[-n:]:
+    for k in klines:
         bars.append({
             "timestamp": k[0],
             "open": float(k[1]),
@@ -104,12 +96,14 @@ def fetch_bars(symbol: str, tf: str = TIMEFRAME, n: int = NUM_BARS) -> list[dict
             "trades": int(k[8]),
         })
 
-    # Stale data check: most recent bar should be within 30 minutes
+    # Stale data check: most recent bar should be within 45 minutes (15m candle + buffer)
     if bars:
         last_bar_time = datetime.fromtimestamp(bars[-1]["timestamp"] / 1000, tz=timezone.utc)
         now_utc = datetime.now(timezone.utc)
-        if now_utc - last_bar_time > timedelta(minutes=30):
-            print(f"  ⚠️ Stale data: last bar from {last_bar_time.strftime('%H:%M:%S')} (>{(now_utc - last_bar_time).seconds // 60} min old)")
+        age_min = (now_utc - last_bar_time).seconds // 60
+        if age_min > 45:
+            print(f"  ❌ Stale data: last bar {age_min}min old. Skipping {symbol}.")
+            return []
 
     return bars
 
@@ -162,7 +156,7 @@ def run(dry_run: bool = True) -> dict:
     positions: list[dict] = []
     total_value = usdt_available
 
-    pair_assets = {"BTCUSDT": "BTC", "ETHUSDT": "ETH", "SOLUSDT": "SOL"}
+    pair_assets = PAIR_ASSETS
     for pair in PAIRS:
         asset = pair_assets[pair]
         bal = account["balances"].get(asset)
@@ -230,8 +224,10 @@ def run(dry_run: bool = True) -> dict:
 
                 # Round qty to lot step size
                 qty = round(qty / step_size) * step_size
-                decimals = len(str(step_size).rstrip('0').split('.')[-1])
-                qty = float(f"{qty:.{decimals}}f")
+                # Handle scientific notation in step_size (e.g. 1e-05)
+                step_str = f"{step_size:.10f}".rstrip('0').rstrip('.')
+                decimals = len(step_str.split('.')[-1]) if '.' in step_str else 0
+                qty = round(qty, decimals)
 
                 # Fix #5: lot size → zero qty guard
                 if qty < step_size:
