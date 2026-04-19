@@ -5,71 +5,69 @@
   "signals": [
     {
       "pair": "BTCUSDT",
-      "action": "buy",
-      "confidence": 0.326,
+      "action": "hold",
+      "confidence": 0.067,
       "signal_details": {
-        "ma": "bullish_cross(5/15)",
-        "rsi": "neutral(51.2)",
+        "ma": "no_crossover",
+        "rsi": "neutral(52.8)",
         "volume": "low_volume",
-        "kronos": "kronos_predicts_up_0.21%"
+        "kronos": "kronos_predicts_down_0.54%"
       },
-      "suggested_qty": 0.257811,
+      "suggested_qty": 0.2577,
       "suggested_usdt": 17860.66,
-      "current_price": 69278.12,
-      "rsi": 51.2,
-      "ma_signal": "buy",
-      "raw_score": 0.326,
-      "rationale": "2/4 bullish signals aligned",
-      "kronos_predicted_close": "69422.7",
+      "current_price": 69308.01,
+      "rsi": 52.8,
+      "ma_signal": "hold",
+      "raw_score": -0.067,
+      "rationale": "insufficient signals",
+      "kronos_predicted_close": "68936.49",
       "executed": false,
-      "order_result": {
-        "error": "APIError(code=-1111): Parameter 'quantity' has too much precision."
-      }
+      "order_result": null
     },
     {
       "pair": "ETHUSDT",
       "action": "hold",
-      "confidence": 0.3,
+      "confidence": 0.0,
       "signal_details": {
-        "ma": "bullish_cross(5/15)",
-        "rsi": "neutral(50.6)",
+        "ma": "no_crossover",
+        "rsi": "neutral(53.1)",
         "volume": "low_volume",
-        "kronos": "kronos_predicts_flat_0.11%"
+        "kronos": "kronos_predicts_flat_-0.14%"
       },
-      "suggested_qty": 8.495812,
+      "suggested_qty": 8.487617,
       "suggested_usdt": 17860.66,
-      "current_price": 2102.29,
-      "rsi": 50.6,
-      "ma_signal": "buy",
-      "raw_score": 0.3,
+      "current_price": 2104.32,
+      "rsi": 53.1,
+      "ma_signal": "hold",
+      "raw_score": 0.0,
       "rationale": "insufficient signals",
-      "kronos_predicted_close": "2104.63",
+      "kronos_predicted_close": "2101.38",
       "executed": false,
       "order_result": null
     },
     {
       "pair": "SOLUSDT",
       "action": "hold",
-      "confidence": 0.3,
+      "confidence": 0.0,
       "signal_details": {
-        "ma": "bullish_cross(5/15)",
-        "rsi": "neutral(54.4)",
+        "ma": "no_crossover",
+        "rsi": "neutral(52.2)",
         "volume": "low_volume",
-        "kronos": "kronos_predicts_flat_-0.06%"
+        "kronos": "kronos_predicts_flat_0.17%"
       },
-      "suggested_qty": 202.593709,
+      "suggested_qty": 202.754698,
       "suggested_usdt": 17860.66,
-      "current_price": 88.16,
-      "rsi": 54.4,
-      "ma_signal": "buy",
-      "raw_score": 0.3,
+      "current_price": 88.09,
+      "rsi": 52.2,
+      "ma_signal": "hold",
+      "raw_score": 0.0,
       "rationale": "insufficient signals",
-      "kronos_predicted_close": "88.11",
+      "kronos_predicted_close": "88.24",
       "executed": false,
       "order_result": null
     }
   ],
   "trades_executed": [],
   "dry_run": false,
-  "updated": "2026-04-19T00:53:22.494568+00:00"
+  "updated": "2026-04-19T01:09:09.767027+00:00"
 }
