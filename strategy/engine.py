@@ -220,7 +220,8 @@ class StrategyEngine:
                 rationale = f"cooldown active ({cooldown_hours}h not elapsed)"
 
         # --- Position sizing ---
-        max_trade_usdt = available_usdt * 0.20  # 20% max per trade
+        max_position_pct = p.get("max_position_pct", 20.0)
+        max_trade_usdt = available_usdt * max_position_pct / 100.0
         current_price = closes.iloc[-1]
         suggested_qty = max_trade_usdt / current_price if current_price > 0 else 0
 

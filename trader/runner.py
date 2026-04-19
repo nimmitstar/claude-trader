@@ -26,6 +26,25 @@ NUM_BARS = 200
 
 # Track open SL/TP order IDs: {pair: {"sl": order_id, "tp": order_id}}
 _open_sl_tp_orders: dict[str, dict[str, int]] = {}
+SL_TP_FILE = TRADES_DIR / "sl_tp_orders.json"
+
+
+def _load_sl_tp_orders() -> None:
+    """Load SL/TP orders from disk."""
+    global _open_sl_tp_orders
+    if SL_TP_FILE.exists():
+        try:
+            with open(SL_TP_FILE) as f:
+                _open_sl_tp_orders = json.load(f)
+        except (json.JSONDecodeError, ValueError):
+            _open_sl_tp_orders = {}
+
+
+def _save_sl_tp_orders() -> None:
+    """Save SL/TP orders to disk."""
+    SL_TP_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(SL_TP_FILE, "w") as f:
+        json.dump(_open_sl_tp_orders, f)
 
 
 def cancel_sl_tp_orders(pair: str) -> None:
@@ -43,6 +62,7 @@ def cancel_sl_tp_orders(pair: str) -> None:
             except Exception:
                 pass  # order may already be filled/cancelled
     del _open_sl_tp_orders[pair]
+    _save_sl_tp_orders()
 
 
 def fetch_bars(symbol: str, tf: str = TIMEFRAME, n: int = NUM_BARS) -> list[dict]:
@@ -78,6 +98,14 @@ def fetch_bars(symbol: str, tf: str = TIMEFRAME, n: int = NUM_BARS) -> list[dict
             "quote_volume": float(k[7]),
             "trades": int(k[8]),
         })
+
+    # Stale data check: most recent bar should be within 30 minutes
+    if bars:
+        last_bar_time = datetime.fromtimestamp(bars[-1]["timestamp"] / 1000, tz=timezone.utc)
+        now_utc = datetime.now(timezone.utc)
+        if now_utc - last_bar_time > timedelta(minutes=30):
+            print(f"  ⚠️ Stale data: last bar from {last_bar_time.strftime('%H:%M:%S')} (>{(now_utc - last_bar_time).seconds // 60} min old)")
+
     return bars
 
 
@@ -116,6 +144,7 @@ def run(dry_run: bool = True) -> dict:
     Returns:
         Summary dict with all signals and actions
     """
+    _load_sl_tp_orders()  # Load persisted SL/TP orders
     engine = StrategyEngine()
     account = get_account_info()
     usdt_available = account["usdt_available"]
@@ -262,13 +291,15 @@ def run(dry_run: bool = True) -> dict:
                     sl_order_id = None
                     tp_order_id = None
                     if side == "buy":
-                        entry_price = float(order_res.get("fills", [{}])[0].get("price", price))
+                        fills = order_res.get("fills") or []
+                        entry_price = float(fills[0]["price"]) if fills and fills[0].get("price") else price
                         stop_loss_pct = risk["stop_loss"] / entry_price * 100 if entry_price > 0 else 3.0
                         take_profit_pct = (risk["take_profit"] / entry_price - 1) * 100 if entry_price > 0 else 6.0
                         sl_price = entry_price * (1 - abs(stop_loss_pct) / 100)
                         tp_price = entry_price * (1 + abs(take_profit_pct) / 100)
 
                         try:
+                            # TODO: Verify these parameters match Binance testnet API — test with small order first
                             sl_order = client.create_order(
                                 symbol=pair, side="SELL", type="STOP_MARKET",
                                 quantity=qty, stopPrice=str(round(sl_price, 2)),
@@ -295,6 +326,7 @@ def run(dry_run: bool = True) -> dict:
                                 "sl": sl_order_id,
                                 "tp": tp_order_id,
                             }
+                            _save_sl_tp_orders()
 
                     elif side == "sell":
                         # Cancel SL/TP orders before selling

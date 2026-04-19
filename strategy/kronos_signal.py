@@ -1,5 +1,8 @@
 """Kronos price forecasting signal — ML-based 4th indicator.
 
+TODO: Opus self-tuning should incorporate realized P&L feedback, not just entry signals.
+This would enable adaptive parameter optimization based on actual trade outcomes.
+
 Kronos is a foundation model for financial K-line forecasting:
 https://github.com/shiyu-coder/Kronos
 
@@ -102,15 +105,16 @@ class KronosSignal:
             recent = df[["open", "high", "low", "close", "volume"]].tail(64).copy()
             recent.columns = ["open", "high", "low", "close", "volume"]
 
-            # Build timestamps (tz-naive — Kronos calc_time_stamps uses .dt accessor)
-            now = pd.Timestamp.now()
+            # Build timestamps using actual bar timestamps (unix ms → pd.Timestamp)
+            last_bar_ts = pd.to_datetime(df["timestamp"].iloc[-1], unit="ms")
+            # Generate 15min intervals ending at last bar time
             x_timestamp = pd.date_range(
-                end=now - pd.Timedelta(minutes=15),
+                end=last_bar_ts,
                 periods=len(recent),
                 freq="15min",
             )
             y_timestamp = pd.date_range(
-                start=now,
+                start=last_bar_ts + pd.Timedelta(minutes=15),
                 periods=4,
                 freq="15min",
             )
