@@ -45,7 +45,7 @@ def check_risk(
         }
 
     # Check single position size
-    if new_order.side == "buy" and order_value > total_value * max_position_pct:
+    if new_order.side == "buy" and order_value > total_value * max_position_pct * 1.001:  # 0.1% tolerance for floating point
         return {
             "allowed": False,
             "reason": f"exceeds {max_position_pct*100:.0f}% position cap: {order_value:.2f} > {total_value * max_position_pct:.2f}",

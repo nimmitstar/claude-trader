@@ -17,25 +17,25 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def get_client() -> Client:
-    """Get authenticated Binance client.
+def get_client(mainnet: bool = False) -> Client:
+    """Get Binance client.
 
-    Uses testnet by default for safe development.
+    Args:
+        mainnet: If True, use mainnet (public data only, no keys needed).
+                If False, use testnet (authenticated, for trade execution).
     """
+    if mainnet:
+        # Public mainnet client — no API keys needed for market data
+        return Client()
+
     api_key = os.getenv("BINANCE_API_KEY")
     api_secret = os.getenv("BINANCE_API_SECRET")
 
     if not api_key or not api_secret:
         raise click.ClickException("BINANCE_API_KEY and BINANCE_API_SECRET must be set in .env")
 
-    # Use testnet by default
-    testnet = os.getenv("BINANCE_TESTNET", "true").lower() == "true"
-
-    if testnet:
-        # Binance Spot Testnet
-        return Client(api_key, api_secret, testnet=True)
-    else:
-        return Client(api_key, api_secret)
+    # Binance Spot Testnet
+    return Client(api_key, api_secret, testnet=True)
 
 
 def json_output(data: object) -> None:

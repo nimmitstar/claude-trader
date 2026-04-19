@@ -46,8 +46,8 @@ def cancel_sl_tp_orders(pair: str) -> None:
 
 
 def fetch_bars(symbol: str, tf: str = TIMEFRAME, n: int = NUM_BARS) -> list[dict]:
-    """Fetch bars using the binance client directly."""
-    client = get_client()
+    """Fetch bars from mainnet (real market data)."""
+    client = get_client(mainnet=True)
     tf_map = {
         "1m": client.KLINE_INTERVAL_1MINUTE,
         "5m": client.KLINE_INTERVAL_5MINUTE,
@@ -101,8 +101,8 @@ def get_account_info() -> dict:
 
 
 def get_current_price(symbol: str) -> float:
-    """Get current price for a symbol."""
-    client = get_client()
+    """Get current price from mainnet."""
+    client = get_client(mainnet=True)
     ticker = client.get_symbol_ticker(symbol=symbol)
     return float(ticker["price"])
 
@@ -178,12 +178,16 @@ def run(dry_run: bool = True) -> dict:
             price = signal["current_price"]
             side = signal["action"]
 
-            # Get exchange info for lot size and min notional
+            # Get exchange info for lot size and min notional (testnet)
             step_size = 0.001
             min_notional = 5.0
             try:
-                _client = get_client()
+                _client = get_client(mainnet=False)  # testnet for execution rules
                 info = _client.get_symbol_info(pair)
+                if not info:
+                    # Fallback to mainnet if testnet symbol info unavailable
+                    _client = get_client(mainnet=True)
+                    info = _client.get_symbol_info(pair)
                 for f in info['filters']:
                     if f['filterType'] == 'LOT_SIZE':
                         step_size = float(f['stepSize'])
@@ -209,8 +213,8 @@ def run(dry_run: bool = True) -> dict:
                     result["risk_reason"] = "below_min_notional"
                     results.append(result)
                     continue
-            except Exception:
-                pass  # fallback to unrounded qty
+            except Exception as e:
+                print(f"  ⚠️ Could not get symbol info: {e}")
 
             # Fix #2: sell without position check
             if side == "sell":
