@@ -96,36 +96,27 @@ def fetch_sentiment() -> dict:
     except Exception as e:
         result["fear_greed_error"] = str(e)
 
-    # 2. Fetch crypto news via web search
+    # 2. Fetch crypto news via CoinGecko API
     try:
-        import subprocess
-        # Search for latest crypto news
-        news_queries = [
-            "crypto market news today bitcoin ethereum",
-            "cryptocurrency trading sentiment analysis",
-        ]
-        
+        import urllib.request
+        news_url = "https://api.coingecko.com/api/v3/news?page=1&per_page=15"
+        req = urllib.request.Request(news_url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            news_data = json.loads(resp.read().decode())
+            headlines = []
+            for article in news_data.get("data", [])[:15]:
+                title = article.get("title", "")
+                if title:
+                    headlines.append(title)
+            result["news_highlights"] = headlines
+    except Exception as e:
+        result["news_error"] = str(e)
         headlines = []
-        for query in news_queries:
-            try:
-                proc = subprocess.run(
-                    ["openclaw", "web-search", "--query", query, "--limit", "5"],
-                    capture_output=True, text=True, timeout=30,
-                    env={**os.environ, "PATH": f"/home/KOOMPI/.local/bin:{os.environ.get('PATH', '')}"}
-                )
-                if proc.returncode == 0 and proc.stdout:
-                    for line in proc.stdout.strip().split("\n"):
-                        line = line.strip()
-                        if line and len(line) > 20:
-                            headlines.append(line)
-            except Exception:
-                pass
 
-        result["news_highlights"] = headlines[:10]
-
-        # Simple sentiment from headlines
-        bullish_words = ["surge", "rally", "bull", "breakout", "recovery", "up", "gain", "soar", "jump", "moon"]
-        bearish_words = ["crash", "drop", "bear", "fall", "plunge", "dump", "slump", "down", "lose", "fear"]
+    # Analyze sentiment from headlines
+    if headlines:
+        bullish_words = ["surge", "rally", "bull", "breakout", "recovery", "up", "gain", "soar", "jump", "moon", "ATH", "adoption", "approval", "ETF"]
+        bearish_words = ["crash", "drop", "bear", "fall", "plunge", "dump", "slump", "down", "lose", "fear", "ban", "hack", "regulation", "SEC"]
         
         bull_count = sum(1 for h in headlines for w in bullish_words if w.lower() in h.lower())
         bear_count = sum(1 for h in headlines for w in bearish_words if w.lower() in h.lower())
@@ -136,9 +127,10 @@ def fetch_sentiment() -> dict:
             result["news_sentiment"] = "bearish"
         else:
             result["news_sentiment"] = "neutral"
-
-    except Exception as e:
-        result["news_error"] = str(e)
+        result["bull_word_count"] = bull_count
+        result["bear_word_count"] = bear_count
+    else:
+        result["news_sentiment"] = "neutral"
 
     # 3. Per-pair sentiment (simplified — use Fear & Greed as base, adjust per pair)
     for pair, name in WATCHLIST_SYMBOLS.items():
