@@ -142,7 +142,7 @@ class KronosSignal:
 
             # Plausibility filter: reject predictions >50% away from current price
             deviation_pct = abs(predicted_close - current_price) / current_price
-            if deviation_pct > 0.50:
+            if deviation_pct > 0.10:
                 logger.warning(f"Kronos garbage prediction for {pair}: predicted {predicted_close}, current {current_price} ({deviation_pct:.1%} deviation)")
                 return {
                     "direction": "neutral",

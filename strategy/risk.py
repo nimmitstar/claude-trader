@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
+import json
+from pathlib import Path
 
-from strategy.opus import load_params
+from strategy.config import load_params
 
 DEFAULT_STOP_LOSS_PCT = 0.03
 DEFAULT_TAKE_PROFIT_PCT = 0.06
@@ -18,6 +21,44 @@ class Order:
     side: str  # "buy" or "sell"
     qty: float
     price: float
+
+
+def check_daily_circuit_breaker(trades_dir: str | Path) -> bool:
+    """Check if daily realized losses exceed 3% of active_capital_usdt."""
+    trades_dir = Path(trades_dir)
+    today = date.today().isoformat()
+    log_file = trades_dir / f"trade-log-{today}.jsonl"
+    if not log_file.exists():
+        return False
+    params = load_params()
+    capital = params.get("active_capital_usdt", 100000)
+    limit = capital * 0.03
+    # Track average buy price per pair
+    buy_info: dict[str, dict] = {}  # pair -> {total_cost, total_qty}
+    realized_losses = 0.0
+    with open(log_file) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            trade = json.loads(line)
+            pair = trade.get("pair", "")
+            action = trade.get("action", "")
+            if action == "buy":
+                info = buy_info.setdefault(pair, {"total_cost": 0.0, "total_qty": 0.0})
+                info["total_cost"] += trade.get("price", 0) * trade.get("qty", 0)
+                info["total_qty"] += trade.get("qty", 0)
+            elif action == "sell":
+                info = buy_info.get(pair)
+                if info and info["total_qty"] > 0:
+                    avg_price = info["total_cost"] / info["total_qty"]
+                    sell_price = trade.get("price", 0)
+                    sell_qty = trade.get("qty", 0)
+                    if sell_price < avg_price:
+                        realized_losses += (avg_price - sell_price) * sell_qty
+                    info["total_cost"] -= avg_price * sell_qty
+                    info["total_qty"] -= sell_qty
+    return realized_losses > limit
 
 
 def check_risk(

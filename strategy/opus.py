@@ -15,6 +15,8 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
+from strategy.config import load_params, save_params
+
 TRADES_DIR = Path(__file__).parent.parent / "trades"
 CONFIG_FILE = Path(__file__).parent.parent / "strategy" / "params.json"
 AUDIT_FILE = TRADES_DIR / "opus-audit.jsonl"
@@ -40,19 +42,7 @@ DEFAULT_PARAMS = {
 }
 
 
-def load_params() -> dict:
-    """Load current strategy parameters."""
-    if CONFIG_FILE.exists():
-        with open(CONFIG_FILE) as f:
-            return json.load(f)
-    return {**DEFAULT_PARAMS}
-
-
-def save_params(params: dict) -> None:
-    """Save strategy parameters."""
-    with open(CONFIG_FILE, "w") as f:
-        json.dump(params, f, indent=2)
-    _apply_params_to_engine(params)
+# load_params and save_params imported from strategy.config
 
 
 def _apply_params_to_engine(params: dict) -> None:

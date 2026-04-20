@@ -1,21 +1,45 @@
 {
-  "total_value_usdt": 5247274.0600000005,
-  "usdt_available": 463259.157,
+  "total_value_usdt": 5283344.883840691,
+  "usdt_available": 480499.13291807,
   "positions": [
     {
       "asset": "BTC",
       "pair": "BTCUSDT",
-      "qty": 46.0,
-      "price": 74168.1,
-      "value_usdt": 3411732.6,
+      "qty": 45.994,
+      "price": 74727.7,
+      "value_usdt": 3437025.8337999997,
       "is_new": false
     },
     {
       "asset": "ETH",
       "pair": "ETHUSDT",
-      "qty": 601.0,
-      "price": 2265.46,
-      "value_usdt": 1361541.46,
+      "qty": 581.13735873,
+      "price": 2293.05,
+      "value_usdt": 1332577.0204358266,
+      "is_new": false
+    },
+    {
+      "asset": "XRP",
+      "pair": "XRPUSDT",
+      "qty": 7553.28809232,
+      "price": 1.413,
+      "value_usdt": 10672.79607444816,
+      "is_new": false
+    },
+    {
+      "asset": "SUI",
+      "pair": "SUIUSDT",
+      "qty": 14782.47978715,
+      "price": 0.9407,
+      "value_usdt": 13905.878735772005,
+      "is_new": false
+    },
+    {
+      "asset": "DOT",
+      "pair": "DOTUSDT",
+      "qty": 6876.36656871,
+      "price": 1.26,
+      "value_usdt": 8664.2218765746,
       "is_new": false
     }
   ],
@@ -23,193 +47,198 @@
     {
       "pair": "BTCUSDT",
       "action": "hold",
-      "confidence": 0.075,
+      "confidence": 0.0,
       "signal_details": {
         "ma": "no_crossover",
-        "rsi": "weak_bearish(31.5)",
+        "rsi": "neutral(50.7)",
         "volume": "low_volume",
-        "kronos": "kronos_predicts_flat_-0.04%"
+        "kronos": "kronos_predicts_flat_-0.19%",
+        "trend": "neutral"
       },
-      "suggested_qty": 0.202254,
+      "suggested_qty": 0.200798,
       "suggested_usdt": 15000.0,
-      "current_price": 74164.2,
-      "rsi": 31.5,
+      "current_price": 74702.0,
+      "rsi": 50.7,
       "ma_signal": "hold",
-      "raw_score": 0.075,
+      "raw_score": 0.0,
       "rationale": "insufficient signals",
-      "kronos_predicted_close": "74134.4",
+      "kronos_predicted_close": "74558.74",
       "executed": false,
       "order_result": null
     },
     {
       "pair": "ETHUSDT",
-      "action": "buy",
-      "confidence": 0.352,
-      "signal_details": {
-        "ma": "no_crossover",
-        "rsi": "oversold(27.7)",
-        "volume": "low_volume",
-        "kronos": "kronos_predicts_down_0.59%"
-      },
-      "suggested_qty": 6.621727,
-      "suggested_usdt": 15000.0,
-      "current_price": 2265.27,
-      "rsi": 27.7,
-      "ma_signal": "hold",
-      "raw_score": 0.352,
-      "rationale": "2/4 bullish signals aligned",
-      "kronos_predicted_close": "2251.86",
-      "executed": true,
-      "order_result": {
-        "order_id": "2197210388033178880"
-      }
-    },
-    {
-      "pair": "SOLUSDT",
-      "action": "sell",
-      "confidence": 0.415,
-      "signal_details": {
-        "ma": "bearish_cross(5/15)",
-        "rsi": "weak_bearish(30.4)",
-        "volume": "low_volume",
-        "kronos": "kronos_predicts_up_0.24%"
-      },
-      "suggested_qty": 178.912214,
-      "suggested_usdt": 15000.0,
-      "current_price": 83.84,
-      "rsi": 30.4,
-      "ma_signal": "sell",
-      "raw_score": -0.415,
-      "rationale": "2/4 bearish signals aligned",
-      "kronos_predicted_close": "84.04",
-      "executed": false,
-      "order_result": null,
-      "risk_reason": "no_position"
-    },
-    {
-      "pair": "XRPUSDT",
-      "action": "buy",
-      "confidence": 0.43,
-      "signal_details": {
-        "ma": "no_crossover",
-        "rsi": "oversold(22.7)",
-        "volume": "low_volume",
-        "kronos": "kronos_predicts_down_0.28%"
-      },
-      "suggested_qty": 10734.220696,
-      "suggested_usdt": 15000.0,
-      "current_price": 1.3974,
-      "rsi": 22.7,
-      "ma_signal": "hold",
-      "raw_score": 0.43,
-      "rationale": "2/4 bullish signals aligned",
-      "kronos_predicted_close": "1.39",
-      "executed": true,
-      "order_result": {
-        "order_id": "2197210408627211520"
-      }
-    },
-    {
-      "pair": "BNBUSDT",
       "action": "hold",
-      "confidence": 0.25,
+      "confidence": 0.15,
       "signal_details": {
         "ma": "no_crossover",
-        "rsi": "oversold(22.9)",
+        "rsi": "neutral(54.4)",
         "volume": "low_volume",
-        "kronos": "kronos_predicts_flat_0.16%"
+        "kronos": "kronos_predicts_up_0.40%",
+        "trend": "bearish"
       },
-      "suggested_qty": 24.295432,
+      "suggested_qty": 6.543846,
       "suggested_usdt": 15000.0,
-      "current_price": 617.4,
-      "rsi": 22.9,
+      "current_price": 2292.23,
+      "rsi": 54.4,
       "ma_signal": "hold",
-      "raw_score": 0.25,
+      "raw_score": -0.15,
       "rationale": "insufficient signals",
-      "kronos_predicted_close": "618.38",
+      "kronos_predicted_close": "2301.43",
       "executed": false,
       "order_result": null
     },
     {
-      "pair": "SUIUSDT",
-      "action": "sell",
-      "confidence": 0.344,
+      "pair": "SOLUSDT",
+      "action": "hold",
+      "confidence": 0.0,
       "signal_details": {
-        "ma": "bearish_cross(5/15)",
-        "rsi": "weak_bearish(30.3)",
+        "ma": "no_crossover",
+        "rsi": "neutral(52.7)",
         "volume": "low_volume",
-        "kronos": "kronos_predicts_up_0.52%"
+        "kronos": "kronos_predicts_flat_0.09%",
+        "trend": "bearish"
       },
-      "suggested_qty": 16135.972461,
+      "suggested_qty": 177.284009,
       "suggested_usdt": 15000.0,
-      "current_price": 0.9296,
-      "rsi": 30.3,
-      "ma_signal": "sell",
-      "raw_score": -0.344,
-      "rationale": "2/4 bearish signals aligned",
-      "kronos_predicted_close": "0.93",
+      "current_price": 84.61,
+      "rsi": 52.7,
+      "ma_signal": "hold",
+      "raw_score": 0.0,
+      "rationale": "insufficient signals",
+      "kronos_predicted_close": "84.68",
       "executed": false,
-      "order_result": null,
-      "risk_reason": "no_position"
+      "order_result": null
+    },
+    {
+      "pair": "XRPUSDT",
+      "action": "hold",
+      "confidence": 0.0,
+      "signal_details": {
+        "ma": "no_crossover",
+        "rsi": "neutral(50.3)",
+        "volume": "low_volume",
+        "kronos": "kronos_predicts_flat_-0.18%",
+        "trend": "bullish"
+      },
+      "suggested_qty": 10624.734382,
+      "suggested_usdt": 15000.0,
+      "current_price": 1.4118,
+      "rsi": 50.3,
+      "ma_signal": "hold",
+      "raw_score": 0.0,
+      "rationale": "insufficient signals",
+      "kronos_predicted_close": "1.41",
+      "executed": false,
+      "order_result": null
+    },
+    {
+      "pair": "BNBUSDT",
+      "action": "buy",
+      "confidence": 0.186,
+      "signal_details": {
+        "ma": "no_crossover",
+        "rsi": "weak_bullish(60.1)",
+        "volume": "low_volume",
+        "kronos": "kronos_predicts_down_0.56%",
+        "trend": "bullish"
+      },
+      "suggested_qty": 24.02691,
+      "suggested_usdt": 15000.0,
+      "current_price": 624.3,
+      "rsi": 60.1,
+      "ma_signal": "hold",
+      "raw_score": 0.186,
+      "rationale": "2/4 bullish signals aligned",
+      "kronos_predicted_close": "620.83",
+      "executed": false,
+      "order_result": {
+        "error": "no active orders for this pair (ErrCode: 170380) (ErrTime: 08:08:05).\nRequest \u2192 POST https://api-demo-testnet.bybit.com/v5/order/create: {\"category\": \"spot\", \"symbol\": \"BNBUSDT\", \"side\": \"Buy\", \"orderType\": \"Market\", \"qty\": \"24.027\"}."
+      }
+    },
+    {
+      "pair": "SUIUSDT",
+      "action": "hold",
+      "confidence": 0.176,
+      "signal_details": {
+        "ma": "no_crossover",
+        "rsi": "neutral(51.5)",
+        "volume": "low_volume",
+        "kronos": "kronos_predicts_down_0.30%",
+        "trend": "bearish"
+      },
+      "suggested_qty": 15959.14459,
+      "suggested_usdt": 15000.0,
+      "current_price": 0.9399,
+      "rsi": 51.5,
+      "ma_signal": "hold",
+      "raw_score": 0.176,
+      "rationale": "insufficient signals",
+      "kronos_predicted_close": "0.94",
+      "executed": false,
+      "order_result": null
     },
     {
       "pair": "ADAUSDT",
       "action": "hold",
-      "confidence": 0.075,
+      "confidence": 0.0,
       "signal_details": {
         "ma": "no_crossover",
-        "rsi": "weak_bearish(30.6)",
+        "rsi": "neutral(49.7)",
         "volume": "low_volume",
-        "kronos": "kronos_predicts_flat_0.20%"
+        "kronos": "kronos_predicts_flat_-0.07%",
+        "trend": "bearish"
       },
-      "suggested_qty": 61525.840853,
+      "suggested_qty": 61050.06105,
       "suggested_usdt": 15000.0,
-      "current_price": 0.2438,
-      "rsi": 30.6,
+      "current_price": 0.2457,
+      "rsi": 49.7,
       "ma_signal": "hold",
-      "raw_score": 0.075,
+      "raw_score": 0.0,
       "rationale": "insufficient signals",
-      "kronos_predicted_close": "0.24",
+      "kronos_predicted_close": "0.25",
       "executed": false,
       "order_result": null
     },
     {
       "pair": "DOTUSDT",
       "action": "hold",
-      "confidence": 0.119,
+      "confidence": 0.186,
       "signal_details": {
         "ma": "no_crossover",
-        "rsi": "weak_bearish(34.7)",
+        "rsi": "neutral(47.0)",
         "volume": "low_volume",
-        "kronos": "kronos_predicts_up_0.22%"
+        "kronos": "kronos_predicts_down_0.26%",
+        "trend": "neutral"
       },
-      "suggested_qty": 11980.830671,
+      "suggested_qty": 11904.761905,
       "suggested_usdt": 15000.0,
-      "current_price": 1.252,
-      "rsi": 34.7,
+      "current_price": 1.26,
+      "rsi": 47.0,
       "ma_signal": "hold",
-      "raw_score": -0.119,
+      "raw_score": 0.186,
       "rationale": "insufficient signals",
-      "kronos_predicted_close": "1.25",
+      "kronos_predicted_close": "1.26",
       "executed": false,
       "order_result": null
     },
     {
       "pair": "APTUSDT",
       "action": "hold",
-      "confidence": 0.121,
+      "confidence": 0.158,
       "signal_details": {
         "ma": "no_crossover",
-        "rsi": "weak_bearish(30.4)",
+        "rsi": "neutral(55.1)",
         "volume": "low_volume",
-        "kronos": "kronos_predicts_up_0.22%"
+        "kronos": "kronos_predicts_down_0.37%",
+        "trend": "bullish"
       },
-      "suggested_qty": 16393.442623,
+      "suggested_qty": 16210.958608,
       "suggested_usdt": 15000.0,
-      "current_price": 0.915,
-      "rsi": 30.4,
+      "current_price": 0.9253,
+      "rsi": 55.1,
       "ma_signal": "hold",
-      "raw_score": -0.121,
+      "raw_score": 0.158,
       "rationale": "insufficient signals",
       "kronos_predicted_close": "0.92",
       "executed": false,
@@ -218,69 +247,27 @@
     {
       "pair": "NEARUSDT",
       "action": "hold",
-      "confidence": 0.068,
+      "confidence": 0.097,
       "signal_details": {
         "ma": "no_crossover",
-        "rsi": "neutral(41.0)",
+        "rsi": "weak_bearish(38.1)",
         "volume": "low_volume",
-        "kronos": "kronos_predicts_down_0.73%"
+        "kronos": "kronos_predicts_up_0.31%",
+        "trend": "bearish"
       },
-      "suggested_qty": 11152.416357,
+      "suggested_qty": 11185.682327,
       "suggested_usdt": 15000.0,
-      "current_price": 1.345,
-      "rsi": 41.0,
+      "current_price": 1.341,
+      "rsi": 38.1,
       "ma_signal": "hold",
-      "raw_score": 0.068,
+      "raw_score": -0.097,
       "rationale": "insufficient signals",
-      "kronos_predicted_close": "1.34",
+      "kronos_predicted_close": "1.35",
       "executed": false,
       "order_result": null
     }
   ],
-  "trades_executed": [
-    {
-      "pair": "ETHUSDT",
-      "action": "buy",
-      "qty": 6.622,
-      "price": 2265.27,
-      "confidence": 0.352,
-      "signal_details": {
-        "ma": "no_crossover",
-        "rsi": "oversold(27.7)",
-        "volume": "low_volume",
-        "kronos": "kronos_predicts_down_0.59%"
-      },
-      "stop_loss": 2197.31,
-      "take_profit": 2401.19,
-      "rationale": "2/4 bullish signals aligned",
-      "order_id": "2197210388033178880",
-      "status": "",
-      "sl_order_id": null,
-      "tp_order_id": null,
-      "timestamp": "2026-04-20T05:44:49.481932+00:00"
-    },
-    {
-      "pair": "XRPUSDT",
-      "action": "buy",
-      "qty": 10734.221,
-      "price": 1.3974,
-      "confidence": 0.43,
-      "signal_details": {
-        "ma": "no_crossover",
-        "rsi": "oversold(22.7)",
-        "volume": "low_volume",
-        "kronos": "kronos_predicts_down_0.28%"
-      },
-      "stop_loss": 1.36,
-      "take_profit": 1.48,
-      "rationale": "2/4 bullish signals aligned",
-      "order_id": "2197210408627211520",
-      "status": "",
-      "sl_order_id": null,
-      "tp_order_id": null,
-      "timestamp": "2026-04-20T05:44:51.933875+00:00"
-    }
-  ],
+  "trades_executed": [],
   "dry_run": false,
-  "updated": "2026-04-20T05:44:58.665957+00:00"
+  "updated": "2026-04-20T08:08:10.123035+00:00"
 }

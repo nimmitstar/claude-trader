@@ -16,7 +16,7 @@ from strategy.opus import (
     load_params,
     parse_opus_response,
 )
-from strategy.risk import Order, check_risk
+from strategy.risk import Order, check_risk, check_daily_circuit_breaker
 from trader.log import TRADES_DIR, log_trade, save_portfolio_state
 
 PAIRS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "SUIUSDT", "ADAUSDT", "DOTUSDT", "APTUSDT", "NEARUSDT"]
@@ -143,6 +143,12 @@ def run(dry_run: bool = True) -> dict:
         Summary dict with all signals and actions
     """
     _load_sl_tp_orders()  # Load persisted SL/TP orders
+
+    # Circuit breaker check
+    if check_daily_circuit_breaker(TRADES_DIR):
+        print("🛑 CIRCUIT BREAKER: Daily loss limit (3% of active capital) reached. Halting.")
+        return {"total_value_usdt": 0, "usdt_available": 0, "positions": [], "signals": [], "trades_executed": [], "dry_run": dry_run, "circuit_breaker": True}
+
     engine = StrategyEngine()
     account = get_account_info()
     usdt_available = account["usdt_available"]

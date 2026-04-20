@@ -9,35 +9,11 @@ import pandas as pd
 import json
 from pathlib import Path
 
+from strategy.config import load_params
 from strategy.indicators import ma_crossover, rsi, volume_confirm
 from strategy.kronos_signal import get_kronos_signal
 
 COOLDOWN_FILE = Path(__file__).parent.parent / "trades" / "cooldown.json"
-PARAMS_FILE = Path(__file__).parent / "params.json"
-
-
-def load_params() -> dict:
-    """Load strategy parameters from params.json."""
-    if PARAMS_FILE.exists():
-        with open(PARAMS_FILE) as f:
-            return json.load(f)
-    # Fallback defaults
-    return {
-        "ma_weight": 0.30,
-        "rsi_weight": 0.25,
-        "vol_weight": 0.20,
-        "kronos_weight": 0.25,
-        "rsi_overbought": 70,
-        "rsi_oversold": 30,
-        "cooldown_hours": 1,
-        "min_signals": 2,
-        "ma_fast": 5,
-        "ma_slow": 15,
-        "rsi_period": 7,
-        "volume_window": 20,
-        "kronos_model": "kronos-small",
-        "kronos_timeout_seconds": 30,
-    }
 
 
 class StrategyEngine:
@@ -60,6 +36,29 @@ class StrategyEngine:
         self.kronos = get_kronos_signal(
             timeout=self.params.get("kronos_timeout_seconds", 30),
         )
+
+    def get_trend_filter(self, pair: str) -> str:
+        """EMA-50 trend filter on 4h timeframe. Returns 'bullish'/'bearish'/'neutral'."""
+        try:
+            from exchange_cli.bybit import get_client
+            client = get_client(mainnet=True)
+            klines = client.get_klines(symbol=pair, interval=client.KLINE_INTERVAL_4HOUR, limit=50)
+            closes = [float(k[4]) for k in klines]
+            if len(closes) < 50:
+                return "neutral"
+            ema = closes[0]
+            mult = 2 / 51
+            for c in closes[1:]:
+                ema = c * mult + ema * (1 - mult)
+            current = closes[-1]
+            diff_pct = (current - ema) / ema
+            if diff_pct > 0.005:
+                return "bullish"
+            elif diff_pct < -0.005:
+                return "bearish"
+            return "neutral"
+        except Exception:
+            return "neutral"
 
     def analyze(
         self,
@@ -90,6 +89,7 @@ class StrategyEngine:
                     "rsi": "insufficient_data",
                     "volume": "insufficient_data",
                     "kronos": "insufficient_data",
+                    "trend": "neutral",
                 },
                 "suggested_qty": 0.0,
                 "suggested_usdt": 0.0,
@@ -212,6 +212,16 @@ class StrategyEngine:
         elif bearish_count >= min_signals and raw_score < -0.1:
             action = "sell"
             rationale = f"{bearish_count}/4 bearish signals aligned"
+
+        # --- Trend filter (EMA-50 on 4h) ---
+        trend = self.get_trend_filter(pair)
+        signal_details["trend"] = trend
+        if trend == "bearish" and action == "buy":
+            action = "hold"
+            rationale = f"trend_filter: bearish (EMA-50 4h), blocked buy"
+        elif trend == "bullish" and action == "sell":
+            action = "hold"
+            rationale = f"trend_filter: bullish (EMA-50 4h), blocked sell"
 
         # --- Cooldown check ---
         if action == "buy":
