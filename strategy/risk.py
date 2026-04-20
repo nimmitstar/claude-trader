@@ -115,6 +115,8 @@ def check_risk(
     active_capital = params.get("active_capital_usdt", 0)
     risk_base = active_capital if active_capital > 0 else total_value
     order_value = new_order.qty * new_order.price
+    base_trade = params.get("base_trade_usdt", 500.0)
+    max_order_value = base_trade * 1.5  # allow up to 1.5x base
 
     # Check USDT available
     if new_order.side == "buy" and order_value > available_usdt:
@@ -125,11 +127,11 @@ def check_risk(
             "take_profit": 0,
         }
 
-    # Check single position size
-    if new_order.side == "buy" and order_value > risk_base * max_position_pct * 1.001:
+    # Check single trade size (use base_trade_usdt, not percentage of portfolio)
+    if new_order.side == "buy" and order_value > max_order_value:
         return {
             "allowed": False,
-            "reason": f"exceeds {max_position_pct*100:.0f}% position cap: {order_value:.2f} > {risk_base * max_position_pct:.2f}",
+            "reason": f"exceeds max trade size: {order_value:.2f} > {max_order_value:.2f}",
             "stop_loss": 0,
             "take_profit": 0,
         }
@@ -171,18 +173,19 @@ def check_risk(
 
 
 def calculate_position_size(available_usdt: float, pair: str = "") -> float:
-    """Max USDT to allocate for a single trade (volatility-adjusted)."""
+    """Max USDT to allocate for a single trade (small fixed base)."""
     params = load_params()
+    base = params.get("base_trade_usdt", 500.0)
     vol_groups = params.get("volatility_groups", {})
     pair_upper = pair.upper()
 
-    if any(pair_upper in v for v in vol_groups.get("low", [])):
-        pct = params.get("max_position_pct_low_vol", 5.0)
-    elif any(pair_upper in v for v in vol_groups.get("medium", [])):
-        pct = params.get("max_position_pct_med_vol", 4.0)
-    elif any(pair_upper in v for v in vol_groups.get("high", [])):
-        pct = params.get("max_position_pct_high_vol", 3.0)
+    # Volatility-adjusted multiplier
+    if any(pair_upper in v for v in vol_groups.get("high", [])):
+        mult = 0.8  # smaller in high vol
+    elif any(pair_upper in v for v in vol_groups.get("low", [])):
+        mult = 1.2  # larger in low vol
     else:
-        pct = params.get("max_position_pct", DEFAULT_MAX_POSITION_PCT * 100)
+        mult = 1.0
 
-    return available_usdt * pct / 100.0
+    # Don't exceed available balance
+    return min(base * mult, available_usdt)
