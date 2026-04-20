@@ -238,7 +238,17 @@ class StrategyEngine:
         else:
             details['kronos'] = "skipped"
 
-        # ── 7. Signal thresholds ────────────────────────────────────────────
+        # ── 7. Sentiment adjustment ──────────────────────────────────────
+        try:
+            from strategy.sentiment import fetch_sentiment, sentiment_modifier
+            sentiment = fetch_sentiment()
+            composite = sentiment_modifier(composite, pair, sentiment)
+            details["sentiment"] = sentiment.get("overall_sentiment", "unknown")
+            details["fear_greed"] = sentiment.get("fear_greed")
+        except Exception:
+            pass  # non-critical
+
+        # ── 8. Signal thresholds ────────────────────────────────────────────
         threshold_strong_buy = p.get("composite_threshold_strong_buy", 0.60)
         threshold_buy = p.get("composite_threshold_buy", 0.35)
         threshold_sell = p.get("composite_threshold_sell", -0.35)

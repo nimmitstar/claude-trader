@@ -487,6 +487,21 @@ def run(dry_run: bool = True) -> dict:
     print(f"  Trades executed: {len(executed_trades)}")
     print(f"  Mode: {'DRY RUN' if dry_run else 'LIVE'}")
 
+    # ── Daily review (once per day at end of cycle) ─────────────────────
+    from datetime import datetime, timezone
+    current_hour_utc = datetime.now(timezone.utc).hour
+    if current_hour_utc == 23:  # Run review at ~23:00 UTC (6:00 AM Cambodia)
+        try:
+            from strategy.review import generate_review, format_review_discord
+            review = generate_review()
+            review_text = format_review_discord(review)
+            print(f"\n📋 Daily Review:\n{review_text}")
+            # Save review notification
+            from trader.notify import save_notification
+            save_notification(review_text)
+        except Exception as e:
+            print(f"  ⚠️ Review failed: {e}")
+
     return portfolio_state
 
 
