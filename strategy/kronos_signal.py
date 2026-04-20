@@ -140,6 +140,17 @@ class KronosSignal:
                     "forecast_reasoning": "nan_prediction",
                 }
 
+            # Plausibility filter: reject predictions >50% away from current price
+            deviation_pct = abs(predicted_close - current_price) / current_price
+            if deviation_pct > 0.50:
+                logger.warning(f"Kronos garbage prediction for {pair}: predicted {predicted_close}, current {current_price} ({deviation_pct:.1%} deviation)")
+                return {
+                    "direction": "neutral",
+                    "confidence": 0.0,
+                    "predicted_close": None,
+                    "forecast_reasoning": f"implausible_prediction ({deviation_pct:.1%} deviation)",
+                }
+
             # Determine direction and confidence
             price_change_pct = (predicted_close - current_price) / current_price * 100
             confidence = min(abs(price_change_pct) / 2.0, 1.0)

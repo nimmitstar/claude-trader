@@ -72,8 +72,8 @@ def check_risk(
                 "take_profit": 0,
             }
     elif new_order.side == "sell":
-        # Reduce exposure for sells
-        current_exposure = max(0, current_exposure - order_value)
+        # Reduce exposure for sells (no additional check needed)
+        pass
 
     # Calculate SL/TP
     if new_order.side == "buy":

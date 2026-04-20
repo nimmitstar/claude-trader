@@ -288,67 +288,38 @@ def run(dry_run: bool = True) -> dict:
                         "status": order_res["status"],
                     }
 
-                    # Fix #1: Place SL/TP as actual exchange orders after buy
-                    # NOTE: Bybit V5 spot doesn't support conditional orders (triggerPrice).
-                    # We use limit orders for TP. SL requires price monitoring (not implemented).
+                    # Fix #1: Place SL/TP as conditional orders (triggerPrice/triggerDirection)
                     sl_order_id = None
                     tp_order_id = None
                     if side == "buy":
-                        fills = order_res.get("fills") or []
-                        entry_price = float(fills[0]["price"]) if fills and fills[0].get("price") else price
                         sl_price = risk["stop_loss"]
                         tp_price = risk["take_profit"]
 
-                        # TP: Use limit sell order above market
                         try:
-                            # Get lot size for qty formatting
-                            info = client.get_symbol_info(pair)
-                            step_size = 0.001  # default fallback
-                            if info and info.get("filters"):
-                                for f in info["filters"]:
-                                    if f.get("filterType") == "LOT_SIZE":
-                                        step_size = float(f.get("stepSize", 0.001))
-                            # Format qty to match lot size precision
-                            step_str = f"{step_size:.10f}".rstrip("0").rstrip(".")
-                            qty_decimals = len(step_str.split(".")[-1]) if "." in step_str else 0
-                            qty_str = f"{qty:.{qty_decimals}f}"
-
-                            # Round price to tick size
-                            tick_size = 0.0001  # default fallback
-                            if info and info.get("filters"):
-                                for f in info["filters"]:
-                                    if f.get("filterType") == "PRICE_FILTER":
-                                        tick_size = float(f.get("tickSize", 0.0001))
-                            tp_price_rounded = round(tp_price / tick_size) * tick_size
-                            price_decimals = len(f"{tick_size:.10f}".rstrip("0").rstrip(".").split(".")[-1]) if "." in f"{tick_size:.10f}".rstrip("0").rstrip(".") else 0
-                            price_str = f"{tp_price_rounded:.{price_decimals}f}"
-
-                            tp_order = client._client.place_order(
-                                category="spot",
-                                symbol=pair,
-                                side="Sell",
-                                orderType="Limit",
-                                qty=qty_str,
-                                price=price_str,
-                                timeInForce="GTC",
+                            sl_order = client.create_order(
+                                symbol=pair, side="SELL", type="STOP_MARKET",
+                                quantity=qty, stopPrice=sl_price,
                             )
-                            if tp_order.get("retCode") == 0:
-                                tp_order_id = tp_order["result"]["orderId"]
-                                print(f"  🎯 TP limit order placed @ {tp_price_rounded:.4f} (id: {tp_order_id})")
-                            else:
-                                print(f"  ⚠️ TP order failed: {tp_order.get('retMsg', 'Unknown')}")
-                                trade_entry["tp_error"] = tp_order.get("retMsg", "Unknown")
+                            sl_order_id = sl_order["orderId"]
+                            print(f"  🛡️ SL order placed @ {sl_price:.2f} (id: {sl_order_id})")
+                        except Exception as e:
+                            print(f"  ⚠️ SL order failed: {type(e).__name__}: {e}")
+                            trade_entry["sl_error"] = f"{type(e).__name__}: {e}"
+
+                        try:
+                            tp_order = client.create_order(
+                                symbol=pair, side="SELL", type="TAKE_PROFIT_MARKET",
+                                quantity=qty, stopPrice=tp_price,
+                            )
+                            tp_order_id = tp_order["orderId"]
+                            print(f"  🎯 TP order placed @ {tp_price:.2f} (id: {tp_order_id})")
                         except Exception as e:
                             print(f"  ⚠️ TP order failed: {type(e).__name__}: {e}")
                             trade_entry["tp_error"] = f"{type(e).__name__}: {e}"
 
-                        # SL: Not supported on Bybit spot (would require stop-limit or price monitoring)
-                        print(f"  ⚠️ SL not placed: Bybit spot doesn't support conditional stop orders (SL: {sl_price:.2f})")
-                        trade_entry["sl_note"] = "SL not supported on Bybit spot - requires manual monitoring"
-
-                        if tp_order_id:
+                        if sl_order_id or tp_order_id:
                             _open_sl_tp_orders[pair] = {
-                                "sl": None,  # Not supported
+                                "sl": sl_order_id,
                                 "tp": tp_order_id,
                             }
                             _save_sl_tp_orders()
