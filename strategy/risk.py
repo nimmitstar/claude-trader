@@ -33,6 +33,10 @@ def check_risk(
     max_exposure_pct = params.get("max_exposure_pct", DEFAULT_MAX_EXPOSURE_PCT * 100) / 100.0
     max_position_pct = params.get("max_position_pct", DEFAULT_MAX_POSITION_PCT * 100) / 100.0
 
+    # Use active_capital as risk base if set, otherwise full portfolio
+    active_capital = params.get("active_capital_usdt", 0)
+    risk_base = active_capital if active_capital > 0 else total_value
+
     order_value = new_order.qty * new_order.price
 
     # Check USDT available
@@ -45,19 +49,19 @@ def check_risk(
         }
 
     # Check single position size
-    if new_order.side == "buy" and order_value > total_value * max_position_pct * 1.001:  # 0.1% tolerance for floating point
+    if new_order.side == "buy" and order_value > risk_base * max_position_pct * 1.001:  # 0.1% tolerance for floating point
         return {
             "allowed": False,
-            "reason": f"exceeds {max_position_pct*100:.0f}% position cap: {order_value:.2f} > {total_value * max_position_pct:.2f}",
+            "reason": f"exceeds {max_position_pct*100:.0f}% position cap: {order_value:.2f} > {risk_base * max_position_pct:.2f}",
             "stop_loss": 0,
             "take_profit": 0,
         }
 
-    # Check total exposure
-    current_exposure = sum(p.get("value_usdt", 0) for p in positions)
+    # Check total exposure (only count new positions, not pre-existing holdings)
+    new_positions_exposure = sum(p.get("value_usdt", 0) for p in positions if p.get("is_new", False))
     if new_order.side == "buy":
-        new_exposure = current_exposure + order_value
-        if new_exposure > total_value * max_exposure_pct:
+        new_exposure = new_positions_exposure + order_value
+        if new_exposure > risk_base * max_exposure_pct:
             return {
                 "allowed": False,
                 "reason": (

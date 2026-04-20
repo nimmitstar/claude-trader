@@ -1,10 +1,6 @@
-# Trader Baseline
-
-- **Date:** 2026-04-18 20:42 ICT
-- **Starting Balance:** 89,303.31 USDT
-- **Positions:** None (clean slate — all testnet tokens sold)
-- **Strategy:** Swing, 3% SL / 6% TP, MA+RSI+Volume combo
-- **Pairs:** BTCUSDT, ETHUSDT, SOLUSDT
-- **Auto-sell proceeds:** BTC 75,966.58 + ETH 2,348.37 + SOL 432.55 + BNB 631.97 = 79,379.47
-- **Pre-existing USDT:** 9,923.84
-- **Total:** 89,303.31
+{
+  "usdt": 316234.56287038,
+  "positions": 0,
+  "timestamp": "2026-04-19T12:00:00Z",
+  "note": "Clean slate - all junk sold"
+}

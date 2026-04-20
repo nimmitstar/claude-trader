@@ -1,0 +1,254 @@
+{
+  "per_pair": {
+    "BTCUSDT": {
+      "total_trades": 58,
+      "win_rate": 29.3,
+      "win_rate_ci": [
+        30.5,
+        30.7
+      ],
+      "total_pnl": -1884.35,
+      "pnl_pct": -3.77,
+      "avg_win": 6.0,
+      "avg_loss": -2.93,
+      "profit_factor": 0.83,
+      "max_drawdown": 12.36,
+      "sharpe": -0.8,
+      "final_capital": 46498.37
+    },
+    "ETHUSDT": {
+      "total_trades": 109,
+      "win_rate": 26.6,
+      "win_rate_ci": [
+        27.4,
+        27.4
+      ],
+      "total_pnl": -6667.6,
+      "pnl_pct": -13.34,
+      "avg_win": 5.82,
+      "avg_loss": -3.0,
+      "profit_factor": 0.68,
+      "max_drawdown": 22.73,
+      "sharpe": -1.88,
+      "final_capital": 40493.48
+    },
+    "SOLUSDT": {
+      "total_trades": 97,
+      "win_rate": 28.9,
+      "win_rate_ci": [
+        29.6,
+        29.7
+      ],
+      "total_pnl": -3665.68,
+      "pnl_pct": -7.33,
+      "avg_win": 6.0,
+      "avg_loss": -2.97,
+      "profit_factor": 0.8,
+      "max_drawdown": 17.1,
+      "sharpe": -1.11,
+      "final_capital": 43715.21
+    },
+    "XRPUSDT": {
+      "total_trades": 100,
+      "win_rate": 23.0,
+      "win_rate_ci": [
+        24.0,
+        24.0
+      ],
+      "total_pnl": -8429.34,
+      "pnl_pct": -16.86,
+      "avg_win": 6.0,
+      "avg_loss": -3.0,
+      "profit_factor": 0.58,
+      "max_drawdown": 25.32,
+      "sharpe": -2.24,
+      "final_capital": 38983.7
+    },
+    "BNBUSDT": {
+      "total_trades": 65,
+      "win_rate": 23.1,
+      "win_rate_ci": [
+        24.5,
+        24.7
+      ],
+      "total_pnl": -5474.58,
+      "pnl_pct": -10.95,
+      "avg_win": 6.0,
+      "avg_loss": -2.95,
+      "profit_factor": 0.59,
+      "max_drawdown": 17.4,
+      "sharpe": -1.63,
+      "final_capital": 42788.93
+    },
+    "SUIUSDT": {
+      "total_trades": 124,
+      "win_rate": 25.0,
+      "win_rate_ci": [
+        25.7,
+        25.8
+      ],
+      "total_pnl": -8841.89,
+      "pnl_pct": -17.68,
+      "avg_win": 5.85,
+      "avg_loss": -3.0,
+      "profit_factor": 0.63,
+      "max_drawdown": 26.78,
+      "sharpe": -2.03,
+      "final_capital": 38045.03
+    },
+    "AAVEUSDT": {
+      "total_trades": 125,
+      "win_rate": 36.0,
+      "win_rate_ci": [
+        36.4,
+        36.5
+      ],
+      "total_pnl": 2284.1,
+      "pnl_pct": 4.57,
+      "avg_win": 5.91,
+      "avg_loss": -3.0,
+      "profit_factor": 1.1,
+      "max_drawdown": 9.62,
+      "sharpe": -0.17,
+      "final_capital": 48626.57
+    },
+    "LINKUSDT": {
+      "total_trades": 99,
+      "win_rate": 29.3,
+      "win_rate_ci": [
+        30.0,
+        30.1
+      ],
+      "total_pnl": -3427.68,
+      "pnl_pct": -6.86,
+      "avg_win": 6.0,
+      "avg_loss": -2.97,
+      "profit_factor": 0.82,
+      "max_drawdown": 18.07,
+      "sharpe": -1.06,
+      "final_capital": 43900.27
+    },
+    "ADAUSDT": {
+      "total_trades": 105,
+      "win_rate": 23.8,
+      "win_rate_ci": [
+        24.7,
+        24.8
+      ],
+      "total_pnl": -8016.59,
+      "pnl_pct": -16.03,
+      "avg_win": 6.0,
+      "avg_loss": -2.97,
+      "profit_factor": 0.61,
+      "max_drawdown": 23.17,
+      "sharpe": -1.94,
+      "final_capital": 39299.01
+    },
+    "FETUSDT": {
+      "total_trades": 161,
+      "win_rate": 34.2,
+      "win_rate_ci": [
+        34.5,
+        34.6
+      ],
+      "total_pnl": 844.85,
+      "pnl_pct": 1.69,
+      "avg_win": 6.0,
+      "avg_loss": -3.0,
+      "profit_factor": 1.03,
+      "max_drawdown": 17.32,
+      "sharpe": -0.45,
+      "final_capital": 46225.83
+    },
+    "DOTUSDT": {
+      "total_trades": 108,
+      "win_rate": 18.5,
+      "win_rate_ci": [
+        19.6,
+        19.6
+      ],
+      "total_pnl": -12782.82,
+      "pnl_pct": -25.57,
+      "avg_win": 5.72,
+      "avg_loss": -3.0,
+      "profit_factor": 0.4,
+      "max_drawdown": 32.0,
+      "sharpe": -2.84,
+      "final_capital": 34655.92
+    },
+    "APTUSDT": {
+      "total_trades": 121,
+      "win_rate": 28.1,
+      "win_rate_ci": [
+        28.7,
+        28.8
+      ],
+      "total_pnl": -5221.29,
+      "pnl_pct": -10.44,
+      "avg_win": 6.0,
+      "avg_loss": -2.97,
+      "profit_factor": 0.78,
+      "max_drawdown": 20.04,
+      "sharpe": -1.39,
+      "final_capital": 41552.57
+    },
+    "NEARUSDT": {
+      "total_trades": 117,
+      "win_rate": 31.6,
+      "win_rate_ci": [
+        32.2,
+        32.2
+      ],
+      "total_pnl": -1978.45,
+      "pnl_pct": -3.96,
+      "avg_win": 6.0,
+      "avg_loss": -3.0,
+      "profit_factor": 0.91,
+      "max_drawdown": 16.48,
+      "sharpe": -0.77,
+      "final_capital": 44779.62
+    }
+  },
+  "param_stability": {
+    "default": {
+      "total_trades": 21,
+      "win_rate": 42.9,
+      "win_rate_ci": [
+        43.5,
+        44.4
+      ],
+      "total_pnl": 2072.61,
+      "pnl_pct": 4.15,
+      "avg_win": 6.0,
+      "avg_loss": -2.76,
+      "profit_factor": 1.62,
+      "max_drawdown": 2.21,
+      "sharpe": 1.01,
+      "final_capital": 51451.9
+    },
+    "perturbed": {
+      "total_trades": 21,
+      "win_rate": 42.9,
+      "win_rate_ci": [
+        43.5,
+        44.4
+      ],
+      "total_pnl": 2072.61,
+      "pnl_pct": 4.15,
+      "avg_win": 6.0,
+      "avg_loss": -2.76,
+      "profit_factor": 1.62,
+      "max_drawdown": 2.37,
+      "sharpe": 1.0,
+      "final_capital": 51451.9
+    },
+    "delta_pct": 0.0,
+    "overfit_flag": false
+  },
+  "total_trades": 1389,
+  "total_pnl": -63261.32,
+  "period": {
+    "start": "2025-10-22T03:00:00+00:00",
+    "end": "2026-04-20T02:45:00+00:00"
+  }
+}

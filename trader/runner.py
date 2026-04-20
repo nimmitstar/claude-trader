@@ -19,12 +19,11 @@ from strategy.opus import (
 from strategy.risk import Order, check_risk
 from trader.log import TRADES_DIR, log_trade, save_portfolio_state
 
-PAIRS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "SUIUSDT", "AAVEUSDT", "LINKUSDT", "ADAUSDT", "FETUSDT", "DOTUSDT", "APTUSDT", "NEARUSDT"]
+PAIRS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "SUIUSDT", "ADAUSDT", "DOTUSDT", "APTUSDT", "NEARUSDT"]
 PAIR_ASSETS = {
     "BTCUSDT": "BTC", "ETHUSDT": "ETH", "SOLUSDT": "SOL",
     "XRPUSDT": "XRP", "BNBUSDT": "BNB", "SUIUSDT": "SUI",
-    "AAVEUSDT": "AAVE", "LINKUSDT": "LINK", "ADAUSDT": "ADA",
-    "FETUSDT": "FET", "DOTUSDT": "DOT", "APTUSDT": "APT", "NEARUSDT": "NEAR",
+    "ADAUSDT": "ADA", "DOTUSDT": "DOT", "APTUSDT": "APT", "NEARUSDT": "NEAR",
 }
 TIMEFRAME = "15m"
 NUM_BARS = 200
@@ -168,6 +167,7 @@ def run(dry_run: bool = True) -> dict:
                 "qty": bal["total"],
                 "price": prices[pair],
                 "value_usdt": val,
+                "is_new": False,  # pre-existing holdings don't count against active_capital exposure
             })
             total_value += val
 

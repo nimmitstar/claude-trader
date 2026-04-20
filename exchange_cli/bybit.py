@@ -34,9 +34,9 @@ class BybitClient:
     def __init__(self, testnet: bool = True, api_key: str | None = None, api_secret: str | None = None):
         """Initialize Bybit client."""
         if testnet and api_key and api_secret:
-            self._client = HTTP(api_key=api_key, api_secret=api_secret, testnet=True)
+            self._client = HTTP(api_key=api_key, api_secret=api_secret, demo=True, testnet=True)
         elif testnet:
-            self._client = HTTP(testnet=True)
+            self._client = HTTP(demo=True, testnet=True)
         else:
             self._client = HTTP(testnet=False)
         self._testnet = testnet
@@ -88,7 +88,7 @@ class BybitClient:
 
     def get_account(self) -> dict:
         """Get account information (Binance-compatible)."""
-        result = self._client.get_wallet_balance(accountType="SPOT")
+        result = self._client.get_wallet_balance(accountType="UNIFIED")
 
         if result.get("retCode") != 0:
             return {"balances": []}
@@ -412,7 +412,7 @@ def cli() -> None:
 def account() -> None:
     """Show account information."""
     client = get_client()
-    result = client.get_wallet_balance(accountType="SPOT")
+    result = client.get_wallet_balance(accountType="UNIFIED")
 
     # Parse account info
     balances = []
@@ -446,7 +446,7 @@ def positions() -> None:
     """List open positions."""
     client = get_client()
 
-    result = client.get_wallet_balance(accountType="SPOT")
+    result = client.get_wallet_balance(accountType="UNIFIED")
 
     positions = []
 

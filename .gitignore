@@ -78,3 +78,4 @@ models/
 
 # Trade logs (testnet data, not needed in repo)
 trades/
+trading_summary.txt

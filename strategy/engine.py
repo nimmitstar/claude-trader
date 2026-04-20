@@ -223,7 +223,10 @@ class StrategyEngine:
 
         # --- Position sizing ---
         max_position_pct = p.get("max_position_pct", 20.0)
-        max_trade_usdt = available_usdt * max_position_pct / 100.0
+        active_capital = p.get("active_capital_usdt", 0)
+        # Use active_capital as base for sizing if set, otherwise available USDT
+        sizing_base = min(available_usdt, active_capital) if active_capital > 0 else available_usdt
+        max_trade_usdt = sizing_base * max_position_pct / 100.0
         current_price = closes.iloc[-1]
         suggested_qty = max_trade_usdt / current_price if current_price > 0 else 0
 
