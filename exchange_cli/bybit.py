@@ -231,17 +231,21 @@ class BybitClient:
             "timeInForce": "GTC",
         }
 
-        # Handle stop loss / take profit
+        # Handle stop loss / take profit via conditional orders (triggerPrice)
         if "stopPrice" in kwargs:
             stop_price = str(kwargs["stopPrice"])
             if "STOP" in type.upper():
                 order_params["orderType"] = "Market"
-                order_params["stopLoss"] = stop_price
+                order_params["triggerPrice"] = stop_price
+                order_params["triggerDirection"] = "2"  # 2 = price falls below trigger
                 order_params["triggerBy"] = "LastPrice"
+                order_params.pop("timeInForce", None)
             elif "TAKE_PROFIT" in type.upper():
                 order_params["orderType"] = "Market"
-                order_params["takeProfit"] = stop_price
+                order_params["triggerPrice"] = stop_price
+                order_params["triggerDirection"] = "1"  # 1 = price rises above trigger
                 order_params["triggerBy"] = "LastPrice"
+                order_params.pop("timeInForce", None)
 
         result = self._client.place_order(**order_params)
 
