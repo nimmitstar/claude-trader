@@ -24,7 +24,7 @@
   "max_position_pct_low_vol": 5.0,
   "max_position_pct_med_vol": 4.0,
   "max_position_pct_high_vol": 3.0,
-  "base_trade_usdt": 500.0,
+  "base_trade_usdt": 2000.0,
   "cooldown_hours": 2,
   "active_capital_usdt": 10000.0,
   "circuit_breaker_daily_pct": 0.03,
