@@ -12,22 +12,28 @@ import sys
 from pathlib import Path
 
 NOTIFICATION_FILE = Path(__file__).parent.parent / "trades" / ".last_notification"
-CHANNEL_ID = "1495630671635415111"
+CHANNEL_ID = "1495630671635415111"  # #ai-trader
+DEV_CHANNEL_ID = "1495804866482667620"  # #troubleshooting
 
 
-def send_discord(message: str) -> bool:
+def send_discord(message: str, channel_id: str = CHANNEL_ID) -> bool:
     """Send message to Discord via openclaw. Non-blocking on failure."""
     try:
         result = subprocess.run(
             ["openclaw", "message", "send",
              "--channel", "discord",
-             "--target", CHANNEL_ID,
+             "--target", channel_id,
              "--message", message],
             capture_output=True, text=True, timeout=30,
         )
         return result.returncode == 0
     except Exception:
         return False
+
+
+def send_dev(message: str) -> bool:
+    """Send development/troubleshooting message to #troubleshooting."""
+    return send_discord(message, DEV_CHANNEL_ID)
 
 
 def notify_trade(action: str, pair: str, qty: float, price: float,
@@ -68,6 +74,6 @@ def notify_review(review_text: str) -> None:
 
 
 def notify_error(error: str, context: str = "") -> None:
-    """Post error alert."""
+    """Post error alert to #troubleshooting."""
     msg = f"⚠️ **Error** {context}: {error}"
-    send_discord(msg)
+    send_dev(msg)
