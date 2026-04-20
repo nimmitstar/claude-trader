@@ -18,6 +18,7 @@ from strategy.opus import (
 )
 from strategy.risk import Order, check_risk, check_daily_circuit_breaker
 from trader.log import TRADES_DIR, log_trade, save_portfolio_state
+from trader.notify import format_summary, save_notification
 
 PAIRS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "SUIUSDT", "ADAUSDT", "DOTUSDT", "APTUSDT", "NEARUSDT"]
 PAIR_ASSETS = {
@@ -148,6 +149,14 @@ def run(dry_run: bool = True) -> dict:
     if check_daily_circuit_breaker(TRADES_DIR):
         print("🛑 CIRCUIT BREAKER: Daily loss limit (3% of active capital) reached. Halting.")
         return {"total_value_usdt": 0, "usdt_available": 0, "positions": [], "signals": [], "trades_executed": [], "dry_run": dry_run, "circuit_breaker": True}
+
+    # Mark all pairs as analyzed (lock for WebSocket dedup)
+    from pathlib import Path
+    lock_dir = TRADES_DIR / ".analysis_locks"
+    lock_dir.mkdir(parents=True, exist_ok=True)
+    import time
+    for pair in PAIRS:
+        (lock_dir / f"{pair}.lock").write_text(str(time.time()))
 
     engine = StrategyEngine()
     account = get_account_info()
@@ -409,6 +418,9 @@ def run(dry_run: bool = True) -> dict:
         "dry_run": dry_run,
     }
     save_portfolio_state(portfolio_state)
+
+    # Save Discord notification
+    save_notification(format_summary(portfolio_state))
 
     # Summary
     print("\n" + "=" * 60)
