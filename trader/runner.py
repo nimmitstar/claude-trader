@@ -63,8 +63,8 @@ def cancel_sl_tp_orders(pair: str) -> None:
             try:
                 client.cancel_order(symbol=pair, orderId=order_id)
                 print(f"  ↩️ Cancelled {order_type.upper()} order {order_id} for {pair}")
-            except Exception:
-                pass  # order may already be filled/cancelled
+            except Exception as e:
+                print(f"  ⚠️ Failed to cancel {order_type.upper()} order {order_id}: {type(e).__name__}")
     del _open_sl_tp_orders[pair]
     _save_sl_tp_orders()
 
@@ -289,42 +289,66 @@ def run(dry_run: bool = True) -> dict:
                     }
 
                     # Fix #1: Place SL/TP as actual exchange orders after buy
+                    # NOTE: Bybit V5 spot doesn't support conditional orders (triggerPrice).
+                    # We use limit orders for TP. SL requires price monitoring (not implemented).
                     sl_order_id = None
                     tp_order_id = None
                     if side == "buy":
                         fills = order_res.get("fills") or []
                         entry_price = float(fills[0]["price"]) if fills and fills[0].get("price") else price
-                        stop_loss_pct = risk["stop_loss"] / entry_price * 100 if entry_price > 0 else 3.0
-                        take_profit_pct = (risk["take_profit"] / entry_price - 1) * 100 if entry_price > 0 else 6.0
-                        sl_price = entry_price * (1 - abs(stop_loss_pct) / 100)
-                        tp_price = entry_price * (1 + abs(take_profit_pct) / 100)
+                        sl_price = risk["stop_loss"]
+                        tp_price = risk["take_profit"]
 
+                        # TP: Use limit sell order above market
                         try:
-                            # TODO: Verify these parameters match Binance testnet API — test with small order first
-                            sl_order = client.create_order(
-                                symbol=pair, side="SELL", type="STOP_MARKET",
-                                quantity=qty, stopPrice=str(round(sl_price, 2)),
+                            # Get lot size for qty formatting
+                            info = client.get_symbol_info(pair)
+                            step_size = 0.001  # default fallback
+                            if info and info.get("filters"):
+                                for f in info["filters"]:
+                                    if f.get("filterType") == "LOT_SIZE":
+                                        step_size = float(f.get("stepSize", 0.001))
+                            # Format qty to match lot size precision
+                            step_str = f"{step_size:.10f}".rstrip("0").rstrip(".")
+                            qty_decimals = len(step_str.split(".")[-1]) if "." in step_str else 0
+                            qty_str = f"{qty:.{qty_decimals}f}"
+
+                            # Round price to tick size
+                            tick_size = 0.0001  # default fallback
+                            if info and info.get("filters"):
+                                for f in info["filters"]:
+                                    if f.get("filterType") == "PRICE_FILTER":
+                                        tick_size = float(f.get("tickSize", 0.0001))
+                            tp_price_rounded = round(tp_price / tick_size) * tick_size
+                            price_decimals = len(f"{tick_size:.10f}".rstrip("0").rstrip(".").split(".")[-1]) if "." in f"{tick_size:.10f}".rstrip("0").rstrip(".") else 0
+                            price_str = f"{tp_price_rounded:.{price_decimals}f}"
+
+                            tp_order = client._client.place_order(
+                                category="spot",
+                                symbol=pair,
+                                side="Sell",
+                                orderType="Limit",
+                                qty=qty_str,
+                                price=price_str,
                                 timeInForce="GTC",
                             )
-                            sl_order_id = sl_order["orderId"]
-                            print(f"  🛡️ SL order placed @ {sl_price:.2f} (id: {sl_order_id})")
+                            if tp_order.get("retCode") == 0:
+                                tp_order_id = tp_order["result"]["orderId"]
+                                print(f"  🎯 TP limit order placed @ {tp_price_rounded:.4f} (id: {tp_order_id})")
+                            else:
+                                print(f"  ⚠️ TP order failed: {tp_order.get('retMsg', 'Unknown')}")
+                                trade_entry["tp_error"] = tp_order.get("retMsg", "Unknown")
                         except Exception as e:
-                            print(f"  ⚠️ SL order failed: {e}")
+                            print(f"  ⚠️ TP order failed: {type(e).__name__}: {e}")
+                            trade_entry["tp_error"] = f"{type(e).__name__}: {e}"
 
-                        try:
-                            tp_order = client.create_order(
-                                symbol=pair, side="SELL", type="TAKE_PROFIT_MARKET",
-                                quantity=qty, stopPrice=str(round(tp_price, 2)),
-                                timeInForce="GTC",
-                            )
-                            tp_order_id = tp_order["orderId"]
-                            print(f"  🎯 TP order placed @ {tp_price:.2f} (id: {tp_order_id})")
-                        except Exception as e:
-                            print(f"  ⚠️ TP order failed: {e}")
+                        # SL: Not supported on Bybit spot (would require stop-limit or price monitoring)
+                        print(f"  ⚠️ SL not placed: Bybit spot doesn't support conditional stop orders (SL: {sl_price:.2f})")
+                        trade_entry["sl_note"] = "SL not supported on Bybit spot - requires manual monitoring"
 
-                        if sl_order_id or tp_order_id:
+                        if tp_order_id:
                             _open_sl_tp_orders[pair] = {
-                                "sl": sl_order_id,
+                                "sl": None,  # Not supported
                                 "tp": tp_order_id,
                             }
                             _save_sl_tp_orders()
