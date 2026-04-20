@@ -148,6 +148,8 @@ def run(dry_run: bool = True) -> dict:
     # Circuit breaker check
     if check_daily_circuit_breaker(TRADES_DIR):
         print("🛑 CIRCUIT BREAKER: Daily loss limit (3% of active capital) reached. Halting.")
+        from trader.discord_notify import notify_circuit_breaker
+        notify_circuit_breaker(0, load_params().get("active_capital_usdt", 10000))
         return {"total_value_usdt": 0, "usdt_available": 0, "positions": [], "signals": [], "trades_executed": [], "dry_run": dry_run, "circuit_breaker": True}
 
     # Mark all pairs as analyzed (lock for WebSocket dedup)
@@ -401,6 +403,20 @@ def run(dry_run: bool = True) -> dict:
                     log_trade(trade_entry)
                     executed_trades.append(trade_entry)
 
+                    # Discord notification for individual trade
+                    try:
+                        from trader.discord_notify import notify_trade
+                        notify_trade(
+                            side, pair, qty, price,
+                            signal.get("confidence", ""),
+                            signal.get("rationale", ""),
+                            trade_entry.get("stop_loss", 0),
+                            trade_entry.get("take_profit", 0),
+                            source=trade_entry.get("source", "cron"),
+                        )
+                    except Exception:
+                        pass
+
                     if side == "buy":
                         engine.record_entry(pair)
                         usdt_available -= qty * price
@@ -493,12 +509,11 @@ def run(dry_run: bool = True) -> dict:
     if current_hour_utc == 23:  # Run review at ~23:00 UTC (6:00 AM Cambodia)
         try:
             from strategy.review import generate_review, format_review_discord
+            from trader.discord_notify import notify_review
             review = generate_review()
             review_text = format_review_discord(review)
             print(f"\n📋 Daily Review:\n{review_text}")
-            # Save review notification
-            from trader.notify import save_notification
-            save_notification(review_text)
+            notify_review(review_text)
         except Exception as e:
             print(f"  ⚠️ Review failed: {e}")
 

@@ -97,6 +97,11 @@ def _on_ticker(data: dict) -> None:
                     continue
 
                 print(f"\n🚨 {symbol}: {move_pct:.1f}% move detected (${last:,.2f} → ${price:,.2f})")
+                try:
+                    from trader.discord_notify import notify_big_move
+                    notify_big_move(symbol, move_pct, price, last)
+                except Exception:
+                    pass
                 _set_lock(symbol)
                 _run_analysis(symbol, price)
 
@@ -240,8 +245,15 @@ def _run_analysis(pair: str, trigger_price: float) -> None:
 
         # Post to Discord immediately
         try:
-            from trader.discord_notify import send_discord
-            send_discord(f"🚨 **WS REACTIVE TRADE** {side.upper()} {qty:.4f} {pair} @ ${price:,.2f}")
+            from trader.discord_notify import notify_trade
+            notify_trade(
+                side, pair, qty, price,
+                signal.get("confidence", ""),
+                signal.get("rationale", ""),
+                trade_entry.get("stop_loss", 0),
+                trade_entry.get("take_profit", 0),
+                source="websocket_reactive",
+            )
         except Exception:
             pass
     except Exception as e:
