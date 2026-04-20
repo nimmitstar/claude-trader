@@ -66,6 +66,7 @@ class StrategyEngine:
         pair: str,
         bars: list[dict],
         available_usdt: float,
+        timestamp: datetime | None = None,
     ) -> dict:
         """Analyze bars and return signal.
 
@@ -170,10 +171,10 @@ class StrategyEngine:
         kronos_conf = kronos_result.get("confidence", 0.0)
 
         if kronos_dir == "bullish":
-            kronos_score = kronos_conf  # Scale by confidence
+            kronos_score = kronos_conf * 2 - 1  # Scale [0,1] to [-1,1]
             signal_details["kronos"] = kronos_result.get("forecast_reasoning", "bullish")
         elif kronos_dir == "bearish":
-            kronos_score = -kronos_conf
+            kronos_score = -(kronos_conf * 2 - 1)  # Scale [0,1] to [-1,1]
             signal_details["kronos"] = kronos_result.get("forecast_reasoning", "bearish")
         else:
             kronos_score = 0.0
@@ -215,7 +216,8 @@ class StrategyEngine:
         # --- Cooldown check ---
         if action == "buy":
             last = self.last_entry.get(pair)
-            if last and datetime.now(timezone.utc) - last < timedelta(hours=cooldown_hours):
+            now = timestamp if timestamp else datetime.now(timezone.utc)
+            if last and now - last < timedelta(hours=cooldown_hours):
                 action = "hold"
                 rationale = f"cooldown active ({cooldown_hours}h not elapsed)"
 
@@ -240,9 +242,14 @@ class StrategyEngine:
             "kronos_predicted_close": kronos_result.get("predicted_close"),
         }
 
-    def record_entry(self, pair: str) -> None:
-        """Record entry time for cooldown tracking."""
-        self.last_entry[pair] = datetime.now(timezone.utc)
+    def record_entry(self, pair: str, timestamp: datetime | None = None) -> None:
+        """Record entry time for cooldown tracking.
+
+        Args:
+            pair: Trading pair
+            timestamp: Optional historical timestamp (for backtesting). If None, uses now.
+        """
+        self.last_entry[pair] = timestamp if timestamp else datetime.now(timezone.utc)
         self._save_cooldown()
 
     def _load_cooldown(self) -> None:

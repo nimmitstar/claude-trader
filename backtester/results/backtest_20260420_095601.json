@@ -1,0 +1,101 @@
+{
+  "params": {
+    "starting_capital": 50000.0,
+    "max_position_pct": 0.2,
+    "max_exposure_pct": 0.55,
+    "fee_pct": 0.001,
+    "slippage_pct": 0.0005,
+    "sl_pct": 0.03,
+    "tp_pct": 0.06
+  },
+  "period": {
+    "start": "2026-03-21T03:00:00+00:00",
+    "end": "2026-04-20T02:45:00+00:00"
+  },
+  "train_stats": {
+    "total_trades": 4,
+    "win_rate": 50.0,
+    "win_rate_ci": [
+      45.6,
+      54.4
+    ],
+    "total_pnl": 119.57,
+    "pnl_pct": 0.24,
+    "avg_win": 3.63,
+    "avg_loss": -3.0,
+    "profit_factor": 1.2,
+    "max_drawdown": 1.8,
+    "sharpe": 0.05,
+    "final_capital": 50015.2
+  },
+  "test_stats": {
+    "total_trades": 2,
+    "win_rate": 50.0,
+    "win_rate_ci": [
+      39.9,
+      60.1
+    ],
+    "total_pnl": 590.01,
+    "pnl_pct": 1.18,
+    "avg_win": 6.0,
+    "avg_loss": -0.1,
+    "profit_factor": 60.05,
+    "max_drawdown": 1.16,
+    "sharpe": 2.73,
+    "final_capital": 50543.94
+  },
+  "per_pair": {
+    "BTCUSDT": {
+      "total_trades": 2,
+      "win_rate": 50.0,
+      "win_rate_ci": [
+        39.9,
+        60.1
+      ],
+      "total_pnl": 590.01,
+      "pnl_pct": 1.18,
+      "avg_win": 6.0,
+      "avg_loss": -0.1,
+      "profit_factor": 60.05,
+      "max_drawdown": 1.16,
+      "sharpe": 2.73,
+      "final_capital": 50543.94
+    }
+  },
+  "parameter_stability": {
+    "default": {
+      "total_trades": 2,
+      "win_rate": 50.0,
+      "win_rate_ci": [
+        39.9,
+        60.1
+      ],
+      "total_pnl": 590.01,
+      "pnl_pct": 1.18,
+      "avg_win": 6.0,
+      "avg_loss": -0.1,
+      "profit_factor": 60.05,
+      "max_drawdown": 1.16,
+      "sharpe": 2.73,
+      "final_capital": 50543.94
+    },
+    "perturbed": {
+      "total_trades": 2,
+      "win_rate": 50.0,
+      "win_rate_ci": [
+        39.9,
+        60.1
+      ],
+      "total_pnl": 590.01,
+      "pnl_pct": 1.18,
+      "avg_win": 6.0,
+      "avg_loss": -0.1,
+      "profit_factor": 60.05,
+      "max_drawdown": 1.16,
+      "sharpe": 2.73,
+      "final_capital": 50543.94
+    },
+    "delta_pct": 0.0,
+    "overfit_flag": false
+  }
+}

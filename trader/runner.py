@@ -425,6 +425,44 @@ def run(dry_run: bool = True) -> dict:
     return portfolio_state
 
 
+def check_sl_tp(
+    entry_price: float,
+    current_high: float,
+    current_low: float,
+    sl_pct: float = 0.03,
+    tp_pct: float = 0.06,
+) -> dict:
+    """Check if SL or TP would be triggered for a position.
+
+    For backtester: call this on each new candle to simulate SL/TP hits.
+
+    Args:
+        entry_price: Position entry price
+        current_high: Candle's high price
+        current_low: Candle's low price
+        sl_pct: Stop loss percentage (default 3% = 0.03)
+        tp_pct: Take profit percentage (default 6% = 0.06)
+
+    Returns:
+        dict with:
+            - triggered: True if SL or TP hit
+            - action: "sl" | "tp" | None
+            - exit_price: Price at which SL/TP was hit
+    """
+    sl_price = entry_price * (1 - sl_pct)
+    tp_price = entry_price * (1 + tp_pct)
+
+    # Check if TP was hit (check high)
+    if current_high >= tp_price:
+        return {"triggered": True, "action": "tp", "exit_price": tp_price}
+
+    # Check if SL was hit (check low)
+    if current_low <= sl_price:
+        return {"triggered": True, "action": "sl", "exit_price": sl_price}
+
+    return {"triggered": False, "action": None, "exit_price": None}
+
+
 def main() -> None:
     """CLI entry point."""
     dry = "--live" not in sys.argv
