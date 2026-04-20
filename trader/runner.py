@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from exchange_cli.bybit import get_client
 
@@ -210,11 +210,52 @@ def run(dry_run: bool = True) -> dict:
         kronos_line = ""
         if signal.get("kronos_predicted_close"):
             kronos_line = f" | Kronos: {signal['kronos_predicted_close']}"
-        print(f"  Signal: {signal['action']} (confidence: {signal['confidence']})")
-        print(f"  RSI: {signal['rsi']} | MA: {signal['ma_signal']} | Score: {signal['raw_score']}{kronos_line}")
+        regime_line = signal.get("regime", "")
+        print(f"  Signal: {signal['action']} (confidence: {signal['confidence']}) regime={regime_line}")
+        print(f"  CRSI: {signal['rsi']} | Composite: {signal['raw_score']}{kronos_line}")
         print(f"  Rationale: {signal['rationale']}")
 
         result = {**signal, "executed": False, "order_result": None}
+
+        # ── Signal reversal exit: if holding and composite flips sign ──
+        asset = PAIR_ASSETS.get(pair)
+        if asset and account["balances"].get(asset, {}).get("total", 0) > 0:
+            composite = signal.get("composite_score", 0)
+            # If we hold and composite strongly reversed
+            if signal["action"] == "sell" or composite < -0.35:
+                if not dry_run:
+                    held_qty = account["balances"][asset]["free"]
+                    if held_qty > 0:
+                        print(f"  🔄 Signal reversal exit: selling {held_qty} {pair}")
+                        signal["action"] = "sell"
+                        signal["suggested_qty"] = held_qty
+                        signal["rationale"] = f"signal_reversal_exit(composite={composite:.3f})"
+
+            # ── Time exit: held >24h and unrealized PnL < 0.5% ──
+            if signal["action"] == "hold":
+                try:
+                    from strategy.config import load_params
+                    time_exit_h = load_params().get("time_exit_hours", 24)
+                    held_qty = account["balances"][asset]["total"]
+                    entry_price_val = signal["current_price"] * (1 - signal.get("stop_loss", 0) / signal["current_price"] if signal.get("stop_loss", 0) > 0 else 1)
+                    # Check if position exists in recent trades
+                    today_log = TRADES_DIR / f"trade-log-{date.today().isoformat()}.jsonl"
+                    if today_log.exists():
+                        for line in reversed(list(today_log.open())):
+                            t = json.loads(line.strip())
+                            if t.get("pair") == pair and t.get("action") == "buy":
+                                entry_ts = datetime.fromisoformat(t.get("timestamp", ""))
+                                hours_held = (datetime.now(timezone.utc) - entry_ts).total_seconds() / 3600
+                                if hours_held > time_exit_h:
+                                    unrealized_pct = abs(signal["current_price"] - t.get("price", 0)) / t.get("price", 1)
+                                    if unrealized_pct < 0.005:
+                                        print(f"  ⏰ Time exit: {hours_held:.0f}h held, PnL < 0.5%, selling {held_qty} {pair}")
+                                        signal["action"] = "sell"
+                                        signal["suggested_qty"] = held_qty
+                                        signal["rationale"] = f"time_exit({hours_held:.0f}h,pnl={unrealized_pct:.2%})"
+                                break
+                except Exception as e:
+                    pass  # non-critical, skip
 
         if signal["action"] in ("buy", "sell") and not dry_run:
             qty = signal["suggested_qty"]
@@ -224,6 +265,7 @@ def run(dry_run: bool = True) -> dict:
             # Get exchange info for lot size and min notional (testnet)
             step_size = 0.001
             min_notional = 5.0
+            max_qty = 0
             try:
                 _client = get_client(mainnet=False)  # testnet for execution rules
                 info = _client.get_symbol_info(pair)
@@ -236,13 +278,22 @@ def run(dry_run: bool = True) -> dict:
                         step_size = float(f['stepSize'])
                     elif f['filterType'] == 'MIN_NOTIONAL':
                         min_notional = float(f['minNotional'])
+                    elif f['filterType'] == 'MAX_QTY':
+                        max_qty = float(f['maxQty'])
 
                 # Round qty to lot step size
-                qty = round(qty / step_size) * step_size
+                qty_int = round(qty / step_size)
+                qty = qty_int * step_size
                 # Handle scientific notation in step_size (e.g. 1e-05)
                 step_str = f"{step_size:.10f}".rstrip('0').rstrip('.')
                 decimals = len(step_str.split('.')[-1]) if '.' in step_str else 0
-                qty = round(qty, decimals)
+                # Fix floating point precision (e.g. 14782.479999999 → 14782.480)
+                qty = float(f"{qty:.{decimals}f}")
+
+                # Cap at max qty per order
+                if max_qty > 0 and qty > max_qty:
+                    qty = max_qty
+                    print(f"  ⚠️ Qty capped at {max_qty} (exchange max)")
 
                 # Fix #5: lot size → zero qty guard
                 if qty < step_size:
@@ -274,7 +325,8 @@ def run(dry_run: bool = True) -> dict:
                         results.append(result)
                         continue
 
-            order = Order(pair=pair, side=side, qty=qty, price=price)
+            atr_val = signal.get("atr_value", 0.0)
+            order = Order(pair=pair, side=side, qty=qty, price=price, atr=atr_val)
             risk = check_risk(positions, order, total_value, usdt_available)
 
             if not risk["allowed"]:

@@ -1,4 +1,4 @@
-"""Risk management — position sizing, exposure caps, SL/TP."""
+"""Risk management — position sizing, exposure caps, ATR-based SL/TP."""
 
 from __future__ import annotations
 
@@ -21,10 +21,38 @@ class Order:
     side: str  # "buy" or "sell"
     qty: float
     price: float
+    atr: float = 0.0  # optional: ATR for dynamic SL/TP
+
+
+def calculate_sl_tp(entry_price: float, atr: float, side: str = 'buy') -> tuple[float, float]:
+    """Dynamic ATR-based stop loss and take profit.
+
+    SL = entry ± ATR * 1.5 (capped at 4%)
+    TP = entry ± ATR * 3.0 (2:1 reward/risk)
+    """
+    params = load_params()
+    sl_mult = params.get("atr_sl_mult", 1.5)
+    tp_mult = params.get("atr_tp_mult", 3.0)
+    max_sl_pct = params.get("max_sl_pct", 0.04)
+
+    if atr > 0:
+        sl_distance = min(entry_price * max_sl_pct, atr * sl_mult)
+        tp_distance = atr * tp_mult
+    else:
+        # Fallback to fixed percentages
+        sl_pct = params.get("stop_loss_pct", DEFAULT_STOP_LOSS_PCT * 100) / 100.0
+        tp_pct = params.get("take_profit_pct", DEFAULT_TAKE_PROFIT_PCT * 100) / 100.0
+        sl_distance = entry_price * sl_pct
+        tp_distance = entry_price * tp_pct
+
+    if side == 'buy':
+        return entry_price - sl_distance, entry_price + tp_distance
+    else:
+        return entry_price + sl_distance, entry_price - tp_distance
 
 
 def check_daily_circuit_breaker(trades_dir: str | Path) -> bool:
-    """Check if daily realized losses exceed 3% of active_capital_usdt."""
+    """Check if daily realized losses exceed circuit breaker limit."""
     trades_dir = Path(trades_dir)
     today = date.today().isoformat()
     log_file = trades_dir / f"trade-log-{today}.jsonl"
@@ -32,9 +60,9 @@ def check_daily_circuit_breaker(trades_dir: str | Path) -> bool:
         return False
     params = load_params()
     capital = params.get("active_capital_usdt", 100000)
-    limit = capital * 0.03
-    # Track average buy price per pair
-    buy_info: dict[str, dict] = {}  # pair -> {total_cost, total_qty}
+    cb_pct = params.get("circuit_breaker_daily_pct", 0.03)
+    limit = capital * cb_pct
+    buy_info: dict[str, dict] = {}
     realized_losses = 0.0
     with open(log_file) as f:
         for line in f:
@@ -69,15 +97,23 @@ def check_risk(
 ) -> dict:
     """Check if a new order passes risk guardrails."""
     params = load_params()
-    stop_loss_pct = params.get("stop_loss_pct", DEFAULT_STOP_LOSS_PCT * 100) / 100.0
-    take_profit_pct = params.get("take_profit_pct", DEFAULT_TAKE_PROFIT_PCT * 100) / 100.0
     max_exposure_pct = params.get("max_exposure_pct", DEFAULT_MAX_EXPOSURE_PCT * 100) / 100.0
-    max_position_pct = params.get("max_position_pct", DEFAULT_MAX_POSITION_PCT * 100) / 100.0
 
-    # Use active_capital as risk base if set, otherwise full portfolio
+    # Volatility-adjusted position cap
+    vol_groups = params.get("volatility_groups", {})
+    pair_upper = new_order.pair.upper()
+
+    if any(pair_upper in v for v in vol_groups.get("low", [])):
+        max_position_pct = params.get("max_position_pct_low_vol", 5.0) / 100.0
+    elif any(pair_upper in v for v in vol_groups.get("medium", [])):
+        max_position_pct = params.get("max_position_pct_med_vol", 4.0) / 100.0
+    elif any(pair_upper in v for v in vol_groups.get("high", [])):
+        max_position_pct = params.get("max_position_pct_high_vol", 3.0) / 100.0
+    else:
+        max_position_pct = params.get("max_position_pct", DEFAULT_MAX_POSITION_PCT * 100) / 100.0
+
     active_capital = params.get("active_capital_usdt", 0)
     risk_base = active_capital if active_capital > 0 else total_value
-
     order_value = new_order.qty * new_order.price
 
     # Check USDT available
@@ -90,7 +126,7 @@ def check_risk(
         }
 
     # Check single position size
-    if new_order.side == "buy" and order_value > risk_base * max_position_pct * 1.001:  # 0.1% tolerance for floating point
+    if new_order.side == "buy" and order_value > risk_base * max_position_pct * 1.001:
         return {
             "allowed": False,
             "reason": f"exceeds {max_position_pct*100:.0f}% position cap: {order_value:.2f} > {risk_base * max_position_pct:.2f}",
@@ -98,7 +134,7 @@ def check_risk(
             "take_profit": 0,
         }
 
-    # Check total exposure (only count new positions, not pre-existing holdings)
+    # Check total exposure
     new_positions_exposure = sum(p.get("value_usdt", 0) for p in positions if p.get("is_new", False))
     if new_order.side == "buy":
         new_exposure = new_positions_exposure + order_value
@@ -112,27 +148,41 @@ def check_risk(
                 "stop_loss": 0,
                 "take_profit": 0,
             }
-    elif new_order.side == "sell":
-        # Reduce exposure for sells (no additional check needed)
-        pass
 
-    # Calculate SL/TP
-    if new_order.side == "buy":
-        stop_loss = new_order.price * (1 - stop_loss_pct)
-        take_profit = new_order.price * (1 + take_profit_pct)
+    # ATR-based SL/TP if ATR available, else fixed
+    if new_order.atr > 0:
+        sl, tp = calculate_sl_tp(new_order.price, new_order.atr, new_order.side)
     else:
-        stop_loss = new_order.price * (1 + stop_loss_pct)
-        take_profit = new_order.price * (1 - take_profit_pct)
+        stop_loss_pct = params.get("stop_loss_pct", DEFAULT_STOP_LOSS_PCT * 100) / 100.0
+        take_profit_pct = params.get("take_profit_pct", DEFAULT_TAKE_PROFIT_PCT * 100) / 100.0
+        if new_order.side == "buy":
+            sl = new_order.price * (1 - stop_loss_pct)
+            tp = new_order.price * (1 + take_profit_pct)
+        else:
+            sl = new_order.price * (1 + stop_loss_pct)
+            tp = new_order.price * (1 - take_profit_pct)
 
     return {
         "allowed": True,
         "reason": "ok",
-        "stop_loss": round(stop_loss, 2),
-        "take_profit": round(take_profit, 2),
+        "stop_loss": round(sl, 2),
+        "take_profit": round(tp, 2),
     }
 
 
-def calculate_position_size(available_usdt: float) -> float:
-    """Max USDT to allocate for a single trade."""
+def calculate_position_size(available_usdt: float, pair: str = "") -> float:
+    """Max USDT to allocate for a single trade (volatility-adjusted)."""
     params = load_params()
-    return available_usdt * params.get("max_position_pct", DEFAULT_MAX_POSITION_PCT * 100) / 100.0
+    vol_groups = params.get("volatility_groups", {})
+    pair_upper = pair.upper()
+
+    if any(pair_upper in v for v in vol_groups.get("low", [])):
+        pct = params.get("max_position_pct_low_vol", 5.0)
+    elif any(pair_upper in v for v in vol_groups.get("medium", [])):
+        pct = params.get("max_position_pct_med_vol", 4.0)
+    elif any(pair_upper in v for v in vol_groups.get("high", [])):
+        pct = params.get("max_position_pct_high_vol", 3.0)
+    else:
+        pct = params.get("max_position_pct", DEFAULT_MAX_POSITION_PCT * 100)
+
+    return available_usdt * pct / 100.0
