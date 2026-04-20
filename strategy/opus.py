@@ -20,54 +20,6 @@ from strategy.config import load_params, save_params
 TRADES_DIR = Path(__file__).parent.parent / "trades"
 CONFIG_FILE = Path(__file__).parent.parent / "strategy" / "params.json"
 AUDIT_FILE = TRADES_DIR / "opus-audit.jsonl"
-ENGINE_FILE = Path(__file__).parent.parent / "strategy" / "engine.py"
-
-# Default parameters (source of truth)
-DEFAULT_PARAMS = {
-    "ma_weight": 0.40,
-    "rsi_weight": 0.35,
-    "vol_weight": 0.25,
-    "rsi_overbought": 70,
-    "rsi_oversold": 30,
-    "stop_loss_pct": 3.0,
-    "take_profit_pct": 6.0,
-    "max_position_pct": 20.0,
-    "max_exposure_pct": 60.0,
-    "cooldown_hours": 4,
-    "min_signals": 2,
-    "ma_fast": 10,
-    "ma_slow": 30,
-    "rsi_period": 14,
-    "volume_window": 20,
-}
-
-
-# load_params and save_params imported from strategy.config
-
-
-def _apply_params_to_engine(params: dict) -> None:
-    """Update engine.py constants from params dict."""
-    if not ENGINE_FILE.exists():
-        return
-
-    content = ENGINE_FILE.read_text()
-
-    replacements = {
-        "MA_WEIGHT": params.get("ma_weight", 0.40),
-        "RSI_WEIGHT": params.get("rsi_weight", 0.35),
-        "VOL_WEIGHT": params.get("vol_weight", 0.25),
-        "RSI_OVERBOUGHT": params.get("rsi_overbought", 70),
-        "RSI_OVERSOLD": params.get("rsi_oversold", 30),
-        "COOLDOWN_HOURS": params.get("cooldown_hours", 4),
-        "MIN_SIGNALS": params.get("min_signals", 2),
-    }
-
-    for const_name, value in replacements.items():
-        pattern = rf"^{const_name}\s*=\s*.+$"
-        replacement = f"{const_name} = {value}"
-        content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
-
-    ENGINE_FILE.write_text(content)
 
 
 def build_review_prompt(trade: dict, market_context: dict) -> str:

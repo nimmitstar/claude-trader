@@ -35,10 +35,9 @@ class KronosSignal:
     _predictor = None
     _load_failed = False
 
-    def __init__(self, model_name: str | None = None, tokenizer_name: str | None = None, timeout: int = DEFAULT_TIMEOUT) -> None:
+    def __init__(self, model_name: str | None = None, tokenizer_name: str | None = None) -> None:
         self._model_name = model_name or KRONOS_MODEL_REPO
         self._tokenizer_name = tokenizer_name or KRONOS_TOKENIZER_REPO
-        self._timeout = timeout
 
     @classmethod
     def load_model(cls, model_name: str | None = None, tokenizer_name: str | None = None) -> bool:
@@ -188,7 +187,6 @@ _kronos_instance: KronosSignal | None = None
 def get_kronos_signal(
     model_name: str | None = None,
     tokenizer_name: str | None = None,
-    timeout: int = DEFAULT_TIMEOUT,
 ) -> KronosSignal:
     """Get singleton Kronos signal instance."""
     global _kronos_instance
@@ -196,6 +194,5 @@ def get_kronos_signal(
         _kronos_instance = KronosSignal(
             model_name=model_name,
             tokenizer_name=tokenizer_name,
-            timeout=timeout,
         )
     return _kronos_instance

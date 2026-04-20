@@ -32,17 +32,25 @@ class BybitClient:
     """Wrapper around pybit HTTP client with Binance-compatible interface."""
 
     def __init__(self, testnet: bool = True, api_key: str | None = None, api_secret: str | None = None):
-        """Initialize Bybit client."""
+        """Initialize Bybit client.
+
+        Args:
+            testnet: Use testnet (True) or mainnet (False).
+            api_key: API key for authenticated requests.
+            api_secret: API secret for authenticated requests.
+        """
         if testnet and api_key and api_secret:
             self._client = HTTP(api_key=api_key, api_secret=api_secret, demo=True, testnet=True)
         elif testnet:
             self._client = HTTP(demo=True, testnet=True)
         else:
             self._client = HTTP(testnet=False)
-        self._testnet = testnet
 
     def get_klines(self, symbol: str, interval: str, limit: int = 500) -> list:
-        """Get kline/candlestick data (Binance-compatible)."""
+        """Get kline/candlestick data.
+
+        Returns data in Binance-compatible format: [timestamp, open, high, low, close, volume, ...].
+        """
         result = self._client.get_kline(
             category="spot",
             symbol=symbol,
@@ -72,7 +80,11 @@ class BybitClient:
         return klines
 
     def get_symbol_ticker(self, symbol: str) -> dict:
-        """Get symbol ticker price (Binance-compatible)."""
+        """Get symbol ticker price.
+
+        Returns:
+            Dict with 'symbol' and 'price' keys (Binance-compatible format).
+        """
         result = self._client.get_tickers(category="spot", symbol=symbol)
 
         if result.get("retCode") == 0 and "result" in result:
@@ -87,7 +99,11 @@ class BybitClient:
         raise Exception(f"Could not fetch ticker for {symbol}")
 
     def get_account(self) -> dict:
-        """Get account information (Binance-compatible)."""
+        """Get wallet balance information.
+
+        Returns:
+            Dict with 'balances' key containing list of {asset, free, locked, total} dicts.
+        """
         result = self._client.get_wallet_balance(accountType="UNIFIED")
 
         if result.get("retCode") != 0:
@@ -111,7 +127,12 @@ class BybitClient:
         return {"balances": balances}
 
     def get_symbol_info(self, symbol: str) -> dict | None:
-        """Get symbol trading info (Binance-compatible)."""
+        """Get symbol trading info including lot size filters.
+
+        Returns:
+            Dict with 'filters' key containing LOT_SIZE and MIN_NOTIONAL filters,
+            or None if symbol not found.
+        """
         result = self._client.get_instruments_info(category="spot", symbol=symbol)
 
         if result.get("retCode") == 0 and "result" in result:
@@ -139,7 +160,11 @@ class BybitClient:
         return None
 
     def order_market_buy(self, symbol: str, quantity: float) -> dict:
-        """Place market buy order (Binance-compatible)."""
+        """Place market buy order.
+
+        Returns:
+            Dict with order details in Binance-compatible format.
+        """
         result = self._client.place_order(
             category="spot",
             symbol=symbol,
@@ -175,7 +200,11 @@ class BybitClient:
         }
 
     def order_market_sell(self, symbol: str, quantity: float) -> dict:
-        """Place market sell order (Binance-compatible)."""
+        """Place market sell order.
+
+        Returns:
+            Dict with order details in Binance-compatible format.
+        """
         result = self._client.place_order(
             category="spot",
             symbol=symbol,
@@ -210,7 +239,14 @@ class BybitClient:
         }
 
     def create_order(self, symbol: str, side: str, type: str, quantity: float, **kwargs) -> dict:
-        """Create generic order (for SL/TP, Binance-compatible)."""
+        """Create conditional order (stop loss / take profit).
+
+        Supports STOP_MARKET, TAKE_PROFIT_MARKET, STOP_LOSS_LIMIT, TAKE_PROFIT_LIMIT types.
+        Use stopPrice kwarg for trigger price.
+
+        Returns:
+            Dict with order details in Binance-compatible format.
+        """
         order_type_map = {
             "STOP_MARKET": "Market",
             "TAKE_PROFIT_MARKET": "Market",
@@ -263,7 +299,11 @@ class BybitClient:
         }
 
     def cancel_order(self, symbol: str, orderId: str) -> dict:
-        """Cancel order (Binance-compatible)."""
+        """Cancel a single order.
+
+        Returns:
+            Dict with 'symbol' and 'orderId' keys.
+        """
         result = self._client.cancel_order(
             category="spot",
             symbol=symbol,
@@ -276,7 +316,14 @@ class BybitClient:
         return {"symbol": symbol, "orderId": orderId}
 
     def get_open_orders(self, symbol: str | None = None) -> list:
-        """Get open orders (Binance-compatible)."""
+        """Get all open orders.
+
+        Args:
+            symbol: Filter by symbol, or None for all orders.
+
+        Returns:
+            List of order dicts in Binance-compatible format.
+        """
         if symbol:
             result = self._client.get_open_orders(category="spot", symbol=symbol)
         else:
@@ -301,12 +348,20 @@ class BybitClient:
         return orders
 
     def cancel_open_orders(self, symbol: str) -> list:
-        """Cancel all open orders for a symbol (Binance-compatible)."""
+        """Cancel all open orders for a symbol.
+
+        Returns:
+            Empty list (Bybit API doesn't return cancelled orders).
+        """
         result = self._client.cancel_all_orders(category="spot", symbol=symbol)
         return []  # Bybit returns success info, not order list
 
     def _map_order_status(self, bybit_status: str) -> str:
-        """Map Bybit order status to Binance format."""
+        """Map Bybit order status strings to Binance format.
+
+        Maps: New→NEW, PartiallyFilled→PARTIALLY_FILLED, Filled→FILLED,
+        Cancelled→CANCELED, Rejected→REJECTED, PartiallyFilledCanceled→EXPIRED.
+        """
         status_map = {
             "New": "NEW",
             "PartiallyFilled": "PARTIALLY_FILLED",
@@ -355,15 +410,6 @@ class BybitClient:
         """Get kline raw response (for CLI)."""
         return self._client.get_kline(category=category, symbol=symbol, interval=interval, limit=limit)
 
-    # Timeframe constants (class attributes for compatibility)
-    KLINE_INTERVAL_1MINUTE = KLINE_INTERVAL_1MINUTE
-    KLINE_INTERVAL_5MINUTE = KLINE_INTERVAL_5MINUTE
-    KLINE_INTERVAL_15MINUTE = KLINE_INTERVAL_15MINUTE
-    KLINE_INTERVAL_1HOUR = KLINE_INTERVAL_1HOUR
-    KLINE_INTERVAL_4HOUR = KLINE_INTERVAL_4HOUR
-    KLINE_INTERVAL_1DAY = KLINE_INTERVAL_1DAY
-    KLINE_INTERVAL_1WEEK = KLINE_INTERVAL_1WEEK
-
 
 def get_client(mainnet: bool = False) -> BybitClient:
     """Get Bybit V5 client.
@@ -387,7 +433,7 @@ def get_client(mainnet: bool = False) -> BybitClient:
 
 
 def json_output(data: object) -> None:
-    """Print JSON to stdout."""
+    """Print JSON to stdout with custom serialization."""
 
     def serialize(obj):
         if isinstance(obj, datetime):

@@ -12,7 +12,7 @@ from pathlib import Path
 from strategy.config import load_params
 from strategy.indicators import (
     atr, atr_momentum, bb_squeeze, connors_rsi, detect_regime,
-    macd_histogram_signal, sma, ema,
+    macd_histogram_signal, ema,
 )
 from strategy.kronos_signal import get_kronos_signal
 
@@ -26,12 +26,14 @@ class StrategyEngine:
         self.params = params or load_params()
         self.last_entry: dict[str, datetime] = {}
         self._load_cooldown()
-        self.kronos = get_kronos_signal(
-            timeout=self.params.get("kronos_timeout_seconds", 30),
-        )
+        self.kronos = get_kronos_signal()
 
     def get_trend_filter(self, pair: str) -> str:
-        """EMA-50 trend filter on 4h timeframe."""
+        """Get EMA-50 trend filter on 4h timeframe.
+
+        Returns:
+            'bullish', 'bearish', or 'neutral' based on price vs EMA-50.
+        """
         try:
             from exchange_cli.bybit import get_client
             client = get_client(mainnet=True)
@@ -60,6 +62,17 @@ class StrategyEngine:
         available_usdt: float,
         timestamp: datetime | None = None,
     ) -> dict:
+        """Analyze a trading pair and generate trading signal.
+
+        Args:
+            pair: Trading pair symbol (e.g. "BTCUSDT")
+            bars: OHLCV bar data
+            available_usdt: Available USDT balance
+            timestamp: Optional timestamp for cooldown checks
+
+        Returns:
+            Dict with action, confidence, suggested_qty, stop_loss, take_profit, etc.
+        """
         p = self.params
 
         if not bars or len(bars) < 50:
@@ -359,10 +372,12 @@ class StrategyEngine:
         }
 
     def record_entry(self, pair: str, timestamp: datetime | None = None) -> None:
+        """Record entry time for cooldown tracking."""
         self.last_entry[pair] = timestamp if timestamp else datetime.now(timezone.utc)
         self._save_cooldown()
 
     def _load_cooldown(self) -> None:
+        """Load cooldown state from disk."""
         if COOLDOWN_FILE.exists():
             try:
                 with open(COOLDOWN_FILE) as f:
@@ -373,6 +388,7 @@ class StrategyEngine:
                 pass
 
     def _save_cooldown(self) -> None:
+        """Save cooldown state to disk."""
         COOLDOWN_FILE.parent.mkdir(parents=True, exist_ok=True)
         data = {k: v.isoformat() for k, v in self.last_entry.items()}
         with open(COOLDOWN_FILE, "w") as f:

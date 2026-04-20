@@ -1,24 +1,28 @@
-"""Main trading runner — fetch data, run strategy, execute, log."""
+"""Main trading runner — fetch data, run strategy, execute, log, manage SL/TP."""
 
 from __future__ import annotations
 
 import json
 import sys
-from datetime import date, datetime, timedelta, timezone
+import time
+from datetime import date, datetime, timezone
+from pathlib import Path
 
 from exchange_cli.bybit import get_client
 
 from strategy.engine import StrategyEngine
+from strategy.config import load_params
 from strategy.opus import (
     apply_opus_changes,
     build_review_prompt,
     get_audit_trail,
-    load_params,
     parse_opus_response,
 )
 from strategy.risk import Order, check_risk, check_daily_circuit_breaker
+from strategy.review import generate_review, format_review_discord
 from trader.log import TRADES_DIR, log_trade, save_portfolio_state
 from trader.notify import format_summary, save_notification
+from trader.discord_notify import notify_circuit_breaker, notify_trade, notify_review
 
 PAIRS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "SUIUSDT", "ADAUSDT", "DOTUSDT", "APTUSDT", "NEARUSDT"]
 PAIR_ASSETS = {
@@ -148,15 +152,12 @@ def run(dry_run: bool = True) -> dict:
     # Circuit breaker check
     if check_daily_circuit_breaker(TRADES_DIR):
         print("🛑 CIRCUIT BREAKER: Daily loss limit (3% of active capital) reached. Halting.")
-        from trader.discord_notify import notify_circuit_breaker
         notify_circuit_breaker(0, load_params().get("active_capital_usdt", 10000))
         return {"total_value_usdt": 0, "usdt_available": 0, "positions": [], "signals": [], "trades_executed": [], "dry_run": dry_run, "circuit_breaker": True}
 
     # Mark all pairs as analyzed (lock for WebSocket dedup)
-    from pathlib import Path
     lock_dir = TRADES_DIR / ".analysis_locks"
     lock_dir.mkdir(parents=True, exist_ok=True)
-    import time
     for pair in PAIRS:
         (lock_dir / f"{pair}.lock").write_text(str(time.time()))
 
@@ -236,10 +237,8 @@ def run(dry_run: bool = True) -> dict:
             # ── Time exit: held >24h and unrealized PnL < 0.5% ──
             if signal["action"] == "hold":
                 try:
-                    from strategy.config import load_params
                     time_exit_h = load_params().get("time_exit_hours", 24)
                     held_qty = account["balances"][asset]["total"]
-                    entry_price_val = signal["current_price"] * (1 - signal.get("stop_loss", 0) / signal["current_price"] if signal.get("stop_loss", 0) > 0 else 1)
                     # Check if position exists in recent trades
                     today_log = TRADES_DIR / f"trade-log-{date.today().isoformat()}.jsonl"
                     if today_log.exists():
@@ -256,7 +255,7 @@ def run(dry_run: bool = True) -> dict:
                                         signal["suggested_qty"] = held_qty
                                         signal["rationale"] = f"time_exit({hours_held:.0f}h,pnl={unrealized_pct:.2%})"
                                 break
-                except Exception as e:
+                except Exception:
                     pass  # non-critical, skip
 
         if signal["action"] in ("buy", "sell") and not dry_run:
@@ -405,7 +404,6 @@ def run(dry_run: bool = True) -> dict:
 
                     # Discord notification for individual trade
                     try:
-                        from trader.discord_notify import notify_trade
                         notify_trade(
                             side, pair, qty, price,
                             signal.get("confidence", ""),
@@ -504,12 +502,9 @@ def run(dry_run: bool = True) -> dict:
     print(f"  Mode: {'DRY RUN' if dry_run else 'LIVE'}")
 
     # ── Daily review (once per day at end of cycle) ─────────────────────
-    from datetime import datetime, timezone
     current_hour_utc = datetime.now(timezone.utc).hour
     if current_hour_utc == 23:  # Run review at ~23:00 UTC (6:00 AM Cambodia)
         try:
-            from strategy.review import generate_review, format_review_discord
-            from trader.discord_notify import notify_review
             review = generate_review()
             review_text = format_review_discord(review)
             print(f"\n📋 Daily Review:\n{review_text}")

@@ -7,8 +7,8 @@ Caches results for 15min to avoid redundant API calls.
 from __future__ import annotations
 
 import json
-import os
 import time
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -74,7 +74,6 @@ def fetch_sentiment() -> dict:
 
     # 1. Fetch Fear & Greed Index
     try:
-        import urllib.request
         url = "https://api.alternative.me/fng/?limit=1"
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=10) as resp:
@@ -98,7 +97,6 @@ def fetch_sentiment() -> dict:
 
     # 2. Fetch crypto news via CoinGecko API
     try:
-        import urllib.request
         news_url = "https://api.coingecko.com/api/v3/news?page=1&per_page=15"
         req = urllib.request.Request(news_url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=15) as resp:

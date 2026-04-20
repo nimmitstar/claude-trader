@@ -23,6 +23,9 @@ def get_client(mainnet: bool = False) -> Client:
     Args:
         mainnet: If True, use mainnet (public data only, no keys needed).
                 If False, use testnet (authenticated, for trade execution).
+
+    Returns:
+        Configured Binance client instance.
     """
     if mainnet:
         # Public mainnet client — no API keys needed for market data
@@ -39,7 +42,7 @@ def get_client(mainnet: bool = False) -> Client:
 
 
 def json_output(data: object) -> None:
-    """Print JSON to stdout."""
+    """Print JSON to stdout with custom serialization."""
 
     def serialize(obj):
         if isinstance(obj, datetime):

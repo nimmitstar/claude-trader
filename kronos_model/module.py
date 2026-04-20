@@ -8,6 +8,11 @@ import torch.nn.functional as F
 
 
 class DifferentiableEntropyFunction(Function):
+    """Autograd function for differentiable entropy computation of quantized codes.
+
+    Computes entropy of the codebook usage distribution with a custom backward pass
+    for gradient flow through the discrete quantization operation.
+    """
     @staticmethod
     def forward(ctx, zq, basis, K, eps):
         zb = (zq + 1) / 2
@@ -33,6 +38,17 @@ class DifferentiableEntropyFunction(Function):
 
 
 def codebook_entropy(zq, basis, K, eps=1e-4):
+    """Compute entropy of codebook usage distribution.
+
+    Args:
+        zq: Quantized codes tensor
+        basis: Power-of-2 basis for index computation
+        K: Number of dimensions/bits
+        eps: Small constant for numerical stability
+
+    Returns:
+        Entropy value (scalar)
+    """
     return DifferentiableEntropyFunction.apply(zq, basis, K, eps)
 
 
@@ -88,8 +104,6 @@ class BinarySphericalQuantizer(nn.Module):
         return z + (zhat - z).detach()
 
     def forward(self, z, collect_metrics=True):
-        # if self.input_format == 'bchw':
-        #     z = rearrange(z, 'b c h w -> b h w c')
         zq = self.quantize(z)
 
         q_scale = 1. / (self.embed_dim ** 0.5) if self.l2_norm else 1.
@@ -117,9 +131,6 @@ class BinarySphericalQuantizer(nn.Module):
 
         # commit loss
         commit_loss = self.beta * torch.mean(((zq.detach() - z) ** 2).sum(dim=-1))
-
-        # if self.input_format == 'bchw':
-        #     zq = rearrange(zq, 'b h w c -> b c h w')
 
         return (
             zq,
@@ -223,6 +234,11 @@ class BinarySphericalQuantizer(nn.Module):
 
 
 class BSQuantizer(nn.Module):
+    """Two-stage Binary Spherical Quantizer.
+
+    Splits quantization into s1 (coarse) and s2 (fine) bits for hierarchical
+    representation. Uses BinarySphericalQuantizer internally.
+    """
 
     def __init__(self, s1_bits, s2_bits, beta, gamma0, gamma, zeta, group_size):
         super().__init__()
@@ -255,6 +271,11 @@ class BSQuantizer(nn.Module):
 
 
 class RMSNorm(torch.nn.Module):
+    """Root Mean Square Layer Normalization.
+
+    Normalizes input by the RMS of activations, stabilizing training.
+    """
+
     def __init__(self, dim: int, eps: float = 1e-5):
         super().__init__()
         self.eps = eps
@@ -269,6 +290,12 @@ class RMSNorm(torch.nn.Module):
 
 
 class FeedForward(nn.Module):
+    """SwiGLU feed-forward network.
+
+    Uses two linear projections (w1, w3) passed through SiLU activation,
+    then gated by a third linear projection (w2).
+    """
+
     def __init__(self, d_model, ff_dim, ffn_dropout_p=0.0):
         super().__init__()
 
@@ -282,6 +309,12 @@ class FeedForward(nn.Module):
 
 
 class RotaryPositionalEmbedding(nn.Module):
+    """Rotary Position Embedding (RoPE).
+
+    Applies rotary position encoding to query and key tensors for
+    position-aware attention without absolute position embeddings.
+    """
+
     def __init__(self, dim):
         super().__init__()
         inv_freq = 1.0 / (10000 ** (torch.arange(0, dim, 2).float() / dim))
@@ -313,6 +346,11 @@ class RotaryPositionalEmbedding(nn.Module):
 
 
 class MultiHeadAttentionWithRoPE(nn.Module):
+    """Multi-head attention with rotary position embeddings.
+
+    Causal self-attention using scaled dot-product attention with RoPE.
+    """
+
     def __init__(self, d_model, n_heads, attn_dropout_p=0.0, resid_dropout_p=0.0):
         super().__init__()
         self.d_model = d_model
@@ -354,6 +392,11 @@ class MultiHeadAttentionWithRoPE(nn.Module):
 
 
 class MultiHeadCrossAttentionWithRoPE(nn.Module):
+    """Cross-attention with rotary position embeddings.
+
+    Query from one sequence attends to key/value from another.
+    """
+
     def __init__(self, d_model, n_heads, attn_dropout_p=0.0, resid_dropout=0.0):
         super().__init__()
         self.d_model = d_model
@@ -384,13 +427,11 @@ class MultiHeadCrossAttentionWithRoPE(nn.Module):
         else:
             attn_mask = None
 
-        is_causal_flag = self.training
-
         attn_output = F.scaled_dot_product_attention(
             q, k, v,
             attn_mask=attn_mask,
             dropout_p=self.attn_dropout_p if self.training else 0.0,
-            is_causal=is_causal_flag
+            is_causal=self.training
         )
 
         attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, q_len, self.d_model)
@@ -463,6 +504,11 @@ class DependencyAwareLayer(nn.Module):
 
 
 class TransformerBlock(nn.Module):
+    """Pre-norm Transformer block with self-attention and feed-forward.
+
+    Uses pre-layer normalization (RMSNorm) with residual connections.
+    """
+
     def __init__(self, d_model, n_heads, ff_dim=1024, ffn_dropout_p=0.0, attn_dropout_p=0.0, resid_dropout_p=0.0):
         super().__init__()
         self.norm1 = RMSNorm(d_model)
@@ -514,11 +560,16 @@ class DualHead(nn.Module):
 
 
 class FixedEmbedding(nn.Module):
+    """Fixed sinusoidal position embedding (non-learnable).
+
+    Uses sin/cos functions at different frequencies to encode position.
+    """
+
     def __init__(self, c_in, d_model):
         super(FixedEmbedding, self).__init__()
 
         w = torch.zeros(c_in, d_model).float()
-        w.require_grad = False
+        w.requires_grad = False
 
         position = torch.arange(0, c_in).float().unsqueeze(1)
         div_term = (torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model)).exp()
@@ -534,6 +585,11 @@ class FixedEmbedding(nn.Module):
 
 
 class TemporalEmbedding(nn.Module):
+    """Temporal embedding for time features.
+
+    Embeds minute, hour, weekday, day, and month into continuous vectors.
+    """
+
     def __init__(self, d_model, learn_pe):
         super(TemporalEmbedding, self).__init__()
 
@@ -560,10 +616,6 @@ class TemporalEmbedding(nn.Module):
         month_x = self.month_embed(x[:, :, 4])
 
         return hour_x + weekday_x + day_x + month_x + minute_x
-
-
-
-
 
 
 

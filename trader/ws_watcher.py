@@ -9,7 +9,7 @@ Shares a lock file with the cron runner to prevent duplicate analyses.
 from __future__ import annotations
 
 import json
-import os
+import subprocess
 import sys
 import time
 from datetime import datetime, timezone
@@ -19,19 +19,20 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from exchange_cli.bybit import get_client
 from strategy.engine import StrategyEngine
 from strategy.risk import Order, check_risk, check_daily_circuit_breaker
-from trader.log import TRADES_DIR, log_trade, save_portfolio_state
+from trader.log import TRADES_DIR, log_trade
 from trader.runner import (
     PAIRS,
     PAIR_ASSETS,
+    cancel_sl_tp_orders,
     fetch_bars,
     get_account_info,
     get_current_price,
-    cancel_sl_tp_orders,
 )
 
 # WebSocket URL (Bybit mainnet public spot tickers)
@@ -44,7 +45,6 @@ LOCK_DIR = TRADES_DIR / ".analysis_locks"
 
 # Track prices
 _last_prices: dict[str, float] = {}
-_last_analysis: dict[str, float] = {}  # pair -> timestamp of last analysis
 
 
 def _get_lock_path(pair: str) -> Path:
@@ -273,7 +273,7 @@ def main() -> None:
         import websockets
     except ImportError:
         print("Installing websockets...")
-        os.system("uv pip install websockets")
+        subprocess.run(["uv", "pip", "install", "websockets"], check=True)
         import asyncio
         import websockets
 

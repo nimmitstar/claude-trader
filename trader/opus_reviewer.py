@@ -8,12 +8,10 @@ for the cron session to orchestrate), and auto-applies parameter changes.
 from __future__ import annotations
 
 import json
-import subprocess
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from strategy.opus import apply_opus_changes, get_audit_trail, parse_opus_response
+from strategy.opus import get_audit_trail
 
 TRADES_DIR = Path(__file__).parent.parent / "trades"
 
@@ -26,13 +24,11 @@ def find_pending_reviews() -> list[Path]:
 
 
 def call_opus(prompt: str) -> str:
-    """Call Claude Opus for review.
+    """Return the review prompt for the cron session to pass to Opus.
 
-    Uses the OpenClaw sessions_spawn approach — this script outputs the prompt
-    so the cron session can pass it to Opus via sessions_spawn with model override.
+    The cron session uses sessions_spawn with claude-opus-4.6 model override.
+    This function exists for API compatibility; actual Opus calls happen externally.
     """
-    # For direct invocation, we write the prompt to stdout for the caller
-    # The cron session (agent) will use sessions_spawn with claude-opus-4.6
     return prompt
 
 

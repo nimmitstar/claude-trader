@@ -54,11 +54,6 @@ class StrategyEngine:
             "volume_window": 20,
         }
 
-    # Import indicator functions locally to avoid circular import
-    def _get_indicators(self):
-        from strategy.indicators import ma_crossover, rsi, volume_confirm
-        return ma_crossover, rsi, volume_confirm
-
     def analyze(
         self,
         pair: str,
@@ -66,7 +61,19 @@ class StrategyEngine:
         available_usdt: float,
         timestamp: datetime | None = None,
     ) -> dict:
+        """Analyze market data and generate trading signal.
+
+        Args:
+            pair: Trading pair symbol
+            bars: Historical OHLCV data
+            available_usdt: Available USDT balance
+            timestamp: Current timestamp for cooldown checks
+
+        Returns:
+            Signal dict with action, confidence, rationale, etc.
+        """
         import pandas as pd
+        from strategy.indicators import sma, ema, rsi
 
         p = self.params
 
@@ -78,15 +85,21 @@ class StrategyEngine:
         volumes = df["volume"]
         price_changes = closes.diff()
 
-        ma_crossover, rsi_fn, volume_confirm = self._get_indicators()
-
         ma_fast = p.get("ma_fast", 5)
         ma_slow = p.get("ma_slow", 15)
         rsi_period = p.get("rsi_period", 7)
 
-        ma_signal = ma_crossover(closes, fast=ma_fast, slow=ma_slow).iloc[-1]
-        rsi_val = rsi_fn(closes, period=rsi_period).iloc[-1]
-        vol_confirmed = volume_confirm(price_changes, volumes).iloc[-1]
+        # Simple MA crossover signal using existing indicators
+        fast_ma = ema(closes, ma_fast).iloc[-1]
+        slow_ma = ema(closes, ma_slow).iloc[-1]
+        ma_signal = "buy" if fast_ma > slow_ma else "sell" if fast_ma < slow_ma else "hold"
+
+        rsi_val = rsi(closes, period=rsi_period).iloc[-1]
+
+        # Volume spike detection (simple version)
+        vol_avg = volumes.rolling(20).mean().iloc[-1]
+        vol_confirmed = volumes.iloc[-1] > vol_avg * 1.5 if pd.notna(vol_avg) else False
+
         kronos_result = self.kronos.forecast(bars, pair)
 
         # Score indicators
@@ -166,6 +179,12 @@ class StrategyEngine:
         }
 
     def record_entry(self, pair: str, timestamp: datetime | None = None) -> None:
+        """Record entry time for cooldown tracking.
+
+        Args:
+            pair: Trading pair symbol
+            timestamp: Entry time (defaults to now)
+        """
         self.last_entry[pair] = timestamp if timestamp else datetime.now(timezone.utc)
 
 # Configuration
