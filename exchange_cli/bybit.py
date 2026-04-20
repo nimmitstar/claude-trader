@@ -237,11 +237,11 @@ class BybitClient:
             if "STOP" in type.upper():
                 order_params["orderType"] = "Market"
                 order_params["stopLoss"] = stop_price
-                order_params["triggerBy"] = "MarkPrice"
+                order_params["triggerBy"] = "LastPrice"
             elif "TAKE_PROFIT" in type.upper():
                 order_params["orderType"] = "Market"
                 order_params["takeProfit"] = stop_price
-                order_params["triggerBy"] = "MarkPrice"
+                order_params["triggerBy"] = "LastPrice"
 
         result = self._client.place_order(**order_params)
 
