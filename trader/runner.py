@@ -6,7 +6,7 @@ import json
 import sys
 from datetime import datetime, timedelta, timezone
 
-from binance_cli.binance import get_client
+from exchange_cli.bybit import get_client
 
 from strategy.engine import StrategyEngine
 from strategy.opus import (

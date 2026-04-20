@@ -1,6 +1,6 @@
-# Binance Claude Trader
+# Bybit Claude Trader
 
-Kronos ensemble trading system for crypto on Binance Testnet.
+Kronos ensemble trading system for crypto on Bybit Testnet (uses real mainnet prices).
 
 ## Setup
 
@@ -9,19 +9,19 @@ uv venv
 source .venv/bin/activate
 uv pip install -e ".[dev]"
 cp .env.example .env
-# Edit .env with your Binance Testnet credentials
+# Edit .env with your Bybit Testnet credentials from https://testnet.bybit.com/
 ```
 
 ## CLI
 
 ```bash
-binance account      # Show account info
-binance positions    # List open positions
-binance bars BTCUSDT --tf 1h --n 500
-binance price BTCUSDT
-binance buy BTCUSDT --qty 0.001
-binance sell BTCUSDT --qty 0.001
-binance cancel --all
+exchange account      # Show account info
+exchange positions    # List open positions
+exchange bars BTCUSDT --tf 1h --n 500
+exchange price BTCUSDT
+exchange buy BTCUSDT --qty 0.001
+exchange sell BTCUSDT --qty 0.001
+exchange cancel --all
 ```
 
 ## Phase Plan

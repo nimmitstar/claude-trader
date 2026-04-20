@@ -1,11 +1,11 @@
 [project]
 name = "claude-trader"
 version = "0.1.0"
-description = "Kronos ensemble trading system on Binance Testnet"
+description = "Kronos ensemble trading system on Bybit Testnet"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "python-binance>=1.0.19",
+    "pybit>=5.0.0",
     "python-dotenv>=1.0.0",
     "click>=8.1.0",
     "pandas>=2.0.0",
@@ -28,7 +28,7 @@ dev = [
 ]
 
 [project.scripts]
-binance = "binance_cli.binance:cli"
+exchange = "exchange_cli.bybit:cli"
 trader = "trader.runner:main"
 
 [build-system]
@@ -36,7 +36,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["binance_cli", "kronos_model"]
+packages = ["exchange_cli", "kronos_model"]
 
 [tool.ruff]
 target-version = "py311"
