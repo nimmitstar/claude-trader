@@ -237,6 +237,13 @@ def _run_analysis(pair: str, trigger_price: float) -> None:
 
         log_trade(trade_entry)
         print(f"  ✅ EXECUTED: {side.upper()} {qty} {pair} @ ${price:,.2f} [WS REACTIVE]")
+
+        # Post to Discord immediately
+        try:
+            from trader.discord_notify import send_discord
+            send_discord(f"🚨 **WS REACTIVE TRADE** {side.upper()} {qty:.4f} {pair} @ ${price:,.2f}")
+        except Exception:
+            pass
     except Exception as e:
         print(f"  ❌ Order failed: {e}")
 
